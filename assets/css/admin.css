@@ -1,0 +1,3 @@
+/* Admin specific overrides */
+.sidebar a:hover { background-color: #34495e; }
+main h3 { color: #2a5298; }

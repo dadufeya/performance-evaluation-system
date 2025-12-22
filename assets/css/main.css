@@ -1,0 +1,41 @@
+/* ===== Admin Layout ===== */
+.dashboard-container {
+    margin-top: 60px;
+    margin-left: 250px;
+    padding: 25px;
+    background: #f4f6f9;
+    min-height: calc(100vh - 60px);
+}
+
+/* Page title */
+.page-title {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+}
+
+/* Cards */
+.card-box {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+/* ===== ADMIN LAYOUT FIX ===== */
+.admin-layout {
+    margin-top: 60px;              /* height of header */
+    margin-left: 250px;            /* width of sidebar */
+    padding: 25px;
+    background-color: #f4f6f9;
+    min-height: calc(100vh - 60px);
+    box-sizing: border-box;
+}
+
+/* Prevent tables/forms from exceeding layout */
+.admin-layout * {
+    box-sizing: border-box;
+}
