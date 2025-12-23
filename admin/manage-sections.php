@@ -1,148 +1,104 @@
 <?php
-require_once '../includes/auth.php';
 require_once '../config/config.php';
+require_once '../includes/auth.php';
+
+// --- HANDLE DELETE ---
+if (isset($_GET['delete'])) {
+    $stmt = $pdo->prepare("DELETE FROM sections WHERE section_id = ?");
+    $stmt->execute([$_GET['delete']]);
+    header("Location: manage-sections.php?msg=deleted");
+    exit();
+}
+
+// --- HANDLE ADD ---
+if (isset($_POST['add'])) {
+    $year_id = $_POST['year_id'];
+    $section_number = $_POST['section_number'];
+    
+    $stmt = $pdo->prepare("INSERT INTO sections (year_id, section_number) VALUES (?,?)");
+    $stmt->execute([$year_id, $section_number]);
+    header("Location: manage-sections.php?msg=added");
+    exit();
+}
+
+$years = $pdo->query("SELECT * FROM academic_years ORDER BY year_name ASC")->fetchAll();
+$sections = $pdo->query("SELECT s.*, y.year_name FROM sections s JOIN academic_years y ON s.year_id=y.year_id ORDER BY y.year_name, s.section_number")->fetchAll();
+
 require_once '../includes/header.php';
 require_once '../includes/sidebar-admin.php';
-
-
-if (isset($_POST['add'])) {
-$pdo->prepare("INSERT INTO sections (year_id, section_number) VALUES (?,?)")
-->execute([$_POST['year_id'], $_POST['section_number']]);
-}
-$years = $pdo->query("SELECT * FROM academic_years")->fetchAll();
-$sections = $pdo->query("SELECT s.*, y.year_name FROM sections s JOIN academic_years y ON s.year_id=y.year_id")->fetchAll();
 ?>
 
-<head>
-    <meta charset="UTF-8">
-    <title>Performance Evaluation System</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/main.css">
-</head>
-<main class="content" style="margin-top: 60px;">
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/admin.css">
+
+<main class="main-content">
     <header class="page-header">
-        <h3>Manage Sections</h3>
+        <div class="page-title-area">
+            <h1 class="page-title">Manage Sections</h1>
+            <p class="page-subtitle">Assign sections to specific academic years.</p>
+        </div>
     </header>
 
-    <section class="form-section">
-        <form method="post" class="section-form">
-            <label for="year_id">Select Year</label>
-            <select id="year_id" name="year_id" required>
-                <option value="">-- Select Year --</option>
-                <?php foreach ($years as $y): ?>
-                    <option value="<?= $y['year_id'] ?>"><?= htmlspecialchars($y['year_name']) ?></option>
-                <?php endforeach; ?>
-            </select>
+    <?php if (isset($_GET['msg'])): ?>
+        <div class="alert alert-success">Action completed successfully!</div>
+    <?php endif; ?>
 
-            <label for="section_number">Section Number</label>
-            <input type="number" id="section_number" name="section_number" placeholder="Enter section number" required>
+    <div class="dashboard-secondary-grid">
+        <section class="form-section">
+            <div class="section-card">
+                <h3 class="section-heading">Add New Section</h3>
+                <form method="post" class="admin-form">
+                    <div class="form-group">
+                        <label for="year_id">Select Academic Year</label>
+                        <select id="year_id" name="year_id" required>
+                            <option value="">-- Choose Year --</option>
+                            <?php foreach ($years as $y): ?>
+                                <option value="<?= $y['year_id'] ?>"><?= htmlspecialchars($y['year_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-            <button type="submit" name="add" class="btn-submit">Add Section</button>
-        </form>
-    </section>
+                    <div class="form-group">
+                        <label for="section_number">Section Number/Name</label>
+                        <input type="text" id="section_number" name="section_number" placeholder="e.g. Section A or 101" required>
+                    </div>
 
-    <section class="table-section">
-        <h4>Section List</h4>
-        <table class="section-table">
-            <thead>
-                <tr>
-                    <th>Year</th>
-                    <th>Section</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($sections as $s): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($s['year_name']) ?></td>
-                        <td><?= htmlspecialchars($s['section_number']) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </section>
+                    <button type="submit" name="add" class="btn-primary">Create Section</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="list-section">
+            <div class="section-card">
+                <h3 class="section-heading">Active Sections</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Academic Year</th>
+                            <th>Section</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if($sections): ?>
+                            <?php foreach ($sections as $s): ?>
+                                <tr>
+                                    <td><span class="badge-year"><?= htmlspecialchars($s['year_name']) ?></span></td>
+                                    <td class="fw-bold">Section <?= htmlspecialchars($s['section_number']) ?></td>
+                                    <td style="text-align:right;">
+                                        <a href="?delete=<?= $s['section_id'] ?>" 
+                                           class="btn-delete" 
+                                           onclick="return confirm('Delete this section?')">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="3" style="text-align:center;">No sections created yet.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
 </main>
 
-<style>
-    .content {
-        padding: 20px;
-        background-color: #f8f9fa;
-        min-height: 100vh;
-    }
-
-    .page-header {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .form-section {
-        max-width: 600px;
-        margin: 0 auto 40px;
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .section-form {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .section-form label {
-        font-weight: bold;
-    }
-
-    .section-form input,
-    .section-form select {
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 1rem;
-    }
-
-    .btn-submit {
-        padding: 10px 15px;
-        background-color: #007bff;
-        color: #fff;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: background 0.3s;
-    }
-
-    .btn-submit:hover {
-        background-color: #0056b3;
-    }
-
-    .table-section {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .section-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .section-table th,
-    .section-table td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .section-table th {
-        background-color: #007bff;
-        color: #fff;
-    }
-
-    .section-table tr:hover {
-        background-color: #f1f1f1;
-    }
-</style>
 <?php require_once '../includes/footer.php'; ?>

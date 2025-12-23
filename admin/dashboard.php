@@ -1,121 +1,120 @@
 <?php
 require_once('../config/config.php');
 require_once('../includes/auth.php');
-checkAccess('admin'); // Only admins can see this
 
-include('../includes/header.php');
-include('../includes/sidebar-admin.php');
+// --- FETCH LIVE STATS ---
+$countStudents = 0; $countTeachers = 0; $countDepts = 0; $countEvals = 0; $error = "";
+
+try {
+    $countStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+    $countTeachers = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'teacher'")->fetchColumn();
+    $countDepts    = $pdo->query("SELECT COUNT(*) FROM departments")->fetchColumn();
+    $countEvals    = $pdo->query("SELECT COUNT(*) FROM evaluations")->fetchColumn();
+} catch (PDOException $e) {
+    $error = "Stats Error: " . $e->getMessage();
+}
+
+$displayName = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Administrator';
+
+require_once '../includes/header.php'; 
+require_once '../includes/sidebar-admin.php'; 
 ?>
-<head>
-    <meta charset="UTF-8">
-    <title>Performance Evaluation System</title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/main.css">
-</head>
-<div class="dashboard-container">
-    <main class="content">
-        <header class="dashboard-header">
-            <h1>Admin Dashboard</h1>
-            <p>Welcome back, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</p>
-        </header>
 
-        <section class="dashboard-overview">
-            <div class="stats-grid">
-                <div class="card">
-                    <h3>Total Students</h3>
-                    <p>250</p>
-                </div>
-                <div class="card">
-                    <h3>Total Teachers</h3>
-                    <p>45</p>
-                </div>
-                <div class="card">
-                    <h3>Active Evaluations</h3>
-                    <p>2</p>
-                </div>
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/admin.css">
+
+<main class="main-content">
+    <header class="page-header">
+        <div class="page-title-area">
+            <h1 class="page-title">Management Dashboard</h1>
+            <p class="page-subtitle">Welcome, <span class="user-highlight"><?= htmlspecialchars($displayName); ?></span>. Here is what's happening today.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-generate" onclick="window.print()">Print System Report</button>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <div class="stat-card students">
+            <div class="stat-info">
+                <div class="stat-title">Total Students</div>
+                <div class="stat-value"><?= number_format($countStudents) ?></div>
+            </div>
+            <div class="stat-icon">👥</div>
+        </div>
+        
+        <div class="stat-card teachers">
+            <div class="stat-info">
+                <div class="stat-title">Faculty Members</div>
+                <div class="stat-value"><?= number_format($countTeachers) ?></div>
+            </div>
+            <div class="stat-icon">👨‍🏫</div>
+        </div>
+
+        <div class="stat-card evals">
+            <div class="stat-info">
+                <div class="stat-title">Evaluations</div>
+                <div class="stat-value"><?= number_format($countEvals) ?></div>
+            </div>
+            <div class="stat-icon">📝</div>
+        </div>
+
+        <div class="stat-card depts">
+            <div class="stat-info">
+                <div class="stat-title">Departments</div>
+                <div class="stat-value"><?= number_format($countDepts) ?></div>
+            </div>
+            <div class="stat-icon">🏢</div>
+        </div>
+    </section>
+
+    <div class="dashboard-secondary-grid">
+        <section class="activity-section">
+            <div class="section-card">
+                <h3 class="section-heading">Recent Evaluations</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Teacher</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Abebe Bikila</td>
+                            <td>Dr. Smith</td>
+                            <td>Today, 10:45 AM</td>
+                            <td><span class="badge badge-success">Completed</span></td>
+                        </tr>
+                        <tr>
+                            <td>Sara John</td>
+                            <td>Prof. Kebede</td>
+                            <td>Yesterday</td>
+                            <td><span class="badge badge-success">Completed</span></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
-        <section class="quick-links">
-            <h2>Quick Links</h2>
-            <div class="links-grid">
-                <a href="manage-students.php" class="link-card">Manage Students</a>
-                <a href="manage-teachers.php" class="link-card">Manage Teachers</a>
-                <a href="manage-courses.php" class="link-card">Manage Courses</a>
-                <a href="manage-questionnaire.php" class="link-card">Manage Questionnaire</a>
-                <a href="view-evaluations.php" class="link-card">View Evaluations</a>
-                <a href="release-results.php" class="link-card">Release Results</a>
+        <section class="command-section">
+            <div class="action-card">
+                <h4>👤 System Admin</h4>
+                <p>Manage access levels and user profiles.</p>
+                <a href="manage-students.php" class="action-link">Students List</a>
+                <a href="manage-teachers.php" class="action-link">Teachers List</a>
+                
+                <hr class="card-divider">
+                
+                <h4>📊 Academic Tools</h4>
+                <p>Control the evaluation process.</p>
+                <a href="manage-courses.php" class="action-link">Courses</a>
+                <a href="create-questionnaire.php" class="action-link">Questionnaire</a>
+                <a href="release-results.php" class="action-link btn-highlight">Publish Results →</a>
             </div>
         </section>
-    </main>
-</div>
-
-<style>
-    .dashboard-container {
-        display: flex;
-        margin-top: 60px; /* Ensures alignment with the fixed header */
-    }
-
-    .sidebar {
-        flex: 0 0 250px;
-        height: calc(100vh - 60px); /* Adjusted to fit below the header */
-        position: fixed;
-        top: 60px;
-        left: 0;
-        z-index: 999;
-    }
-
-    .content {
-        flex: 1;
-        margin-left: 250px;
-        padding: 20px;
-        background-color: #f8f9fa;
-        min-height: 100vh;
-    }
-
-    .dashboard-header {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 40px;
-    }
-
-    .card {
-        background: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-
-    .quick-links {
-        margin-top: 40px;
-    }
-
-    .links-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-    }
-
-    .link-card {
-        display: block;
-        padding: 15px;
-        background: #007bff;
-        color: #fff;
-        text-align: center;
-        border-radius: 5px;
-        text-decoration: none;
-        transition: background 0.3s;
-    }
-
-    .link-card:hover {
-        background: #0056b3;
-    }
-</style>
+    </div>
+</main>
 
 <?php include('../includes/footer.php'); ?>

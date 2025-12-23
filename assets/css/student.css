@@ -1,2 +1,87 @@
-/* Student specific overrides */
-main h3 { color: #e67e22; }
+/* --- Student-Specific Variables --- */
+:root {
+    --student-primary: #4cc9f0; /* Lighter blue for a fresh student feel */
+    --student-secondary: #4895ef;
+    --feedback-bg: #fdfdfd;
+    --complaint-bg: #fff5f5;
+}
+
+/* --- Performance Dashboard --- */
+.performance-card {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+}
+
+.percent-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 8px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    position: relative;
+}
+
+/* --- Feedback & Comments UI --- */
+.feedback-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.comment-bubble {
+    background: var(--feedback-bg);
+    border-left: 4px solid var(--student-primary);
+    padding: 15px 20px;
+    border-radius: 0 12px 12px 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    position: relative;
+}
+
+.comment-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.complaint-bubble {
+    background: var(--complaint-bg);
+    border-left-color: var(--danger-color);
+}
+
+/* --- Profile Edit Form --- */
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .profile-grid { grid-template-columns: 1fr; }
+}
+
+.gender-select {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.gender-option {
+    flex: 1;
+    border: 1.5px solid var(--border-color);
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.gender-option:hover { background: var(--primary-light); }

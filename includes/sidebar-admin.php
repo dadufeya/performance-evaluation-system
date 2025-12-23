@@ -1,88 +1,44 @@
+<?php
+$current_page = basename($_SERVER['PHP_SELF']);
+?>
+
 <aside class="sidebar">
+    <div class="sidebar-brand">
+        <span>ADMIN PANEL</span>
+    </div>
     <nav class="sidebar-nav">
-        <a href="dashboard.php" class="sidebar-item">
-            <i class="icon-dashboard"></i> Dashboard
+        <a href="dashboard.php" class="sidebar-item <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
+            <i class="icon-dashboard"></i> <span>Dashboard</span>
         </a>
-        <a href="manage-students.php" class="sidebar-item">
-            <i class="icon-students"></i> Students
+        <div class="nav-divider">Management</div>
+        <a href="manage-students.php" class="sidebar-item <?= ($current_page == 'manage-students.php') ? 'active' : '' ?>">
+            <i class="icon-students"></i> <span>Students</span>
         </a>
-        <a href="manage-teachers.php" class="sidebar-item">
-            <i class="icon-teachers"></i> Teachers
+        <a href="manage-teachers.php" class="sidebar-item <?= ($current_page == 'manage-teachers.php') ? 'active' : '' ?>">
+            <i class="icon-teachers"></i> <span>Teachers</span>
         </a>
-        <a href="manage-departments.php" class="sidebar-item">
-            <i class="icon-departments"></i> Departments
+        <a href="manage-departments.php" class="sidebar-item <?= ($current_page == 'manage-departments.php') ? 'active' : '' ?>">
+            <i class="icon-departments"></i> <span>Departments</span>
         </a>
-        <a href="manage-years.php" class="sidebar-item">
-            <i class="icon-years"></i> Years
+        <div class="nav-divider">Academic</div>
+        <a href="manage-years.php" class="sidebar-item <?= ($current_page == 'manage-years.php') ? 'active' : '' ?>">
+            <i class="icon-years"></i> <span>Years</span>
         </a>
-        <a href="manage-sections.php" class="sidebar-item">
-            <i class="icon-sections"></i> Sections
+        <a href="manage-sections.php" class="sidebar-item <?= ($current_page == 'manage-sections.php') ? 'active' : '' ?>">
+            <i class="icon-sections"></i> <span>Sections</span>
         </a>
-        <a href="manage-courses.php" class="sidebar-item">
-            <i class="icon-courses"></i> Courses
+        <a href="manage-courses.php" class="sidebar-item <?= ($current_page == 'manage-courses.php') ? 'active' : '' ?>">
+            <i class="icon-courses"></i> <span>Courses</span>
         </a>
-        <a href="create-questionnaire.php" class="sidebar-item">
-            <i class="icon-questionnaire"></i> Questionnaire
+        <div class="nav-divider">Reports</div>
+        <a href="create-questionnaire.php" class="sidebar-item <?= ($current_page == 'create-questionnaire.php') ? 'active' : '' ?>">
+            <i class="icon-questionnaire"></i> <span>Questionnaire</span>
         </a>
-        <a href="view-evaluations.php" class="sidebar-item">
-            <i class="icon-evaluations"></i> Evaluations
+        <a href="view-evaluations.php" class="sidebar-item <?= ($current_page == 'view-evaluations.php') ? 'active' : '' ?>">
+            <i class="icon-evaluations"></i> <span>Evaluations</span>
         </a>
-        <a href="complaints.php" class="sidebar-item">
-            <i class="icon-complaints"></i> Complaints
+        <a href="complaints.php" class="sidebar-item <?= ($current_page == 'complaints.php') ? 'active' : '' ?>">
+            <i class="icon-complaints"></i> <span>Complaints</span>
         </a>
     </nav>
 </aside>
-
-<style>
-    .sidebar {
-        width: 250px;
-        background: linear-gradient(180deg, #007bff, #0056b3);
-        color: #fff;
-        height: calc(100vh - 60px); /* Adjusted to connect under the header */
-        position: fixed;
-        top: 60px; /* Starts below the header */
-        left: 0;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-        z-index: 999; /* Ensures it stays below the header */
-    }
-
-    .sidebar-nav {
-        display: flex;
-        flex-direction: column;
-        padding: 10px 0;
-    }
-
-    .sidebar-item {
-        padding: 15px 20px;
-        color: #fff;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1rem;
-        font-weight: 500;
-        transition: background 0.3s, transform 0.2s;
-    }
-
-    .sidebar-item:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        transform: scale(1.05);
-    }
-
-    .sidebar-item i {
-        font-size: 1.2rem;
-    }
-
-    .icon-dashboard::before { content: '\1F4CA'; }
-    .icon-students::before { content: '\1F393'; }
-    .icon-teachers::before { content: '\1F464'; }
-    .icon-departments::before { content: '\1F3E2'; }
-    .icon-years::before { content: '\1F4C5'; }
-    .icon-sections::before { content: '\1F4DA'; }
-    .icon-courses::before { content: '\1F4D6'; }
-    .icon-questionnaire::before { content: '\270F'; }
-    .icon-evaluations::before { content: '\1F4DD'; }
-    .icon-complaints::before { content: '\1F4E2'; }
-</style>
