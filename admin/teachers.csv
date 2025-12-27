@@ -1,5 +1,3 @@
-Full Name,Email,Department ID,Assigned Course
-Dr. Abebe Bekele,abebe.b@univ.edu,1,Introduction to Computing
-Sara Johnson,sara.j@univ.edu,2,Data Structures
-Prof. Michael Smith,m.smith@univ.edu,1,Artificial Intelligence
-Dr. Li Wei,l.wei@univ.edu,3,Operating Systems
+Full Name,Teacher ID,Email,Dept ID,Course,Year,Section
+Dr. Abebe Bekele,ASTU/101/T,abebe@astu.edu.et,1,Python Programming,1,A
+Prof. Martha Moss,ASTU/102/T,martha@astu.edu.et,3,Data Structures,2,B
