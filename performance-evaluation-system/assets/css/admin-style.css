@@ -1,0 +1,244 @@
+/* --- 1. THE 3D FOUNDATION --- */
+:root {
+    --sidebar-width: 280px;
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --depth-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+    --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    --navy-deep: #0f172a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: #f1f5f9; /* Soft background to make 3D white cards pop */
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #1e293b;
+    overflow-x: hidden;
+}
+
+/* --- 2. THE FIX: CONTENT POSITIONING --- */
+.main-content {
+    margin-left: var(--sidebar-width); /* PUSHES CONTENT PAST THE SIDEBAR */
+    width: calc(100% - var(--sidebar-width));
+    padding: 40px;
+    min-height: 100vh;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+/* --- 3. 3D STATS CARDS --- */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--glass-bg);
+    padding: 25px;
+    border-radius: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--depth-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-10px) scale(1.02); /* 3D Lifting Effect */
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
+}
+
+.stat-title { color: #64748b; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; }
+.stat-value { font-size: 2rem; font-weight: 800; color: var(--navy-deep); margin-top: 5px; }
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1); /* Inner 3D depth */
+}
+
+/* --- 4. 3D SECTION CARDS --- */
+.section-card, .action-card {
+    background: white;
+    border-radius: 24px;
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+    box-shadow: var(--depth-shadow);
+    height: 100%;
+}
+
+.dashboard-secondary-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 30px;
+}
+
+/* --- 5. BUTTONS (TACTILE 3D LOOK) --- */
+.btn-publish, .btn-generate {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--primary-gradient);
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #1e40af; /* 3D Button bottom edge */
+    transition: all 0.1s ease;
+}
+
+.btn-publish:active {
+    transform: translateY(3px); /* Button press effect */
+    box-shadow: 0 1px 0 #1e40af;
+}
+
+/* --- 6. 3D TABLE DESIGN --- */
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 12px; /* Spaces rows apart for 3D look */
+}
+
+.data-table tr {
+    transition: transform 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+    transform: scale(1.01);
+    background: #f8fafc;
+}
+
+.data-table td {
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.data-table td:first-child { border-left: 1px solid #f1f5f9; border-radius: 12px 0 0 12px; }
+.data-table td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 12px 12px 0; }
+
+/* --- 7. UTILITIES --- */
+.badge-success {
+    background: #dcfce7;
+    color: #166534;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.action-link {
+    display: block;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #f8fafc;
+    border-radius: 10px;
+    color: var(--navy-deep);
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+}
+
+.action-link:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+/* --- 8. 3D RESOLUTION NOTES & COMPLAINTS --- */
+.message-bubble {
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    /* Inset shadow makes the bubble look carved into the card */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); 
+    color: #475569;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    position: relative;
+}
+
+.feedback-resolved-box {
+    background: #f8fafc; /* Subtle grey to show it's "archived" */
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    color: #334155;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    /* Sunken 3D effect */
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.07);
+    overflow: hidden;
+}
+
+/* Header line inside the resolution box */
+.feedback-resolved-box::before {
+    content: "OFFICIAL RESOLUTION";
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 10px;
+    letter-spacing: 0.1em;
+    border-bottom: 1px dashed #cbd5e1;
+    padding-bottom: 5px;
+}
+
+/* 3D Success Seal */
+.feedback-resolved-box::after {
+    content: "✅";
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Floating badge effect */
+}
+
+.bg-warning { 
+    background: #fff7ed; 
+    color: #c2410c; 
+    border: 1px solid #ffedd5; 
+}
+
+/* Form elements within 3D cards */
+.form-select, .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #f1f5f9;
+    border-radius: 10px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-select:focus, .form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
