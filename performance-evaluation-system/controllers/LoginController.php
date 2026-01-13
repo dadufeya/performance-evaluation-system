@@ -1,72 +1,67 @@
 <?php
 // controllers/LoginController.php
-
 require_once '../config/config.php';
 session_start();
 
-// 1. Get form data safely
-$username = trim($_POST['username'] ?? '');
+$usernameRaw = trim($_POST['username'] ?? '');
 $password = $_POST['password'] ?? '';
 
-// 2. Validate input
-if ($username === '' || $password === '') {
+if ($usernameRaw === '' || $password === '') {
     header("Location: ../login.php?error=1");
     exit();
 }
 
 try {
-    // 3. Fetch user with role
-    $stmt = $pdo->prepare("
-        SELECT 
-            u.user_id,
-            u.username,
-            u.password,
-            r.role_name
-        FROM users u
-        JOIN roles r ON u.role_id = r.role_id
-        WHERE u.username = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Function to attempt login
+    function attemptLogin($pdo, $u, $p) {
+        $stmt = $pdo->prepare("
+            SELECT u.*, r.role_name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.role_id
+            WHERE u.username = ? AND u.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$u]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && password_verify($p, $user['password'])) {
+            return $user;
+        }
+        return false;
+    }
 
-    // 4. Verify password
-    if ($user && password_verify($password, $user['password'])) {
+    // Attempt 1: Raw input
+    $user = attemptLogin($pdo, $usernameRaw, $password);
 
-        // 5. Set session variables
+    // Attempt 2: Lowercase input (if different)
+    if (!$user && strtolower($usernameRaw) !== $usernameRaw) {
+        $user = attemptLogin($pdo, strtolower($usernameRaw), $password);
+    }
+
+    if ($user) {
+        // Clear old session and start fresh
+        session_regenerate_id();
+        
         $_SESSION['user_id']   = $user['user_id'];
         $_SESSION['username']  = $user['username'];
+        $_SESSION['full_name'] = $user['full_name'];
         $_SESSION['user_role'] = $user['role_name'];
 
-        // 6. Redirect based on role
-        switch ($user['role_name']) {
-            case 'admin':
-                header("Location: ../admin/dashboard.php");
-                break;
-
-            case 'teacher':
-                header("Location: ../teacher/dashboard.php");
-                break;
-
-            case 'student':
-                header("Location: ../student/dashboard.php");
-                break;
-
-            default:
-                // Unknown role → logout for safety
-                session_destroy();
-                header("Location: ../login.php?error=1");
+        // Role-based redirection
+        if ($user['role_name'] === 'admin') {
+            header("Location: ../admin/dashboard.php");
+        } elseif ($user['role_name'] === 'teacher') {
+            header("Location: ../teacher/dashboard.php");
+        } elseif ($user['role_name'] === 'student') {
+            header("Location: ../student/student_dashboard.php");
+        } else {
+            header("Location: ../login.php?error=1");
         }
         exit();
-
     } else {
-        // Invalid credentials
         header("Location: ../login.php?error=1");
         exit();
     }
-
 } catch (PDOException $e) {
-    // Database error (log this in real apps)
     header("Location: ../login.php?error=1");
     exit();
 }

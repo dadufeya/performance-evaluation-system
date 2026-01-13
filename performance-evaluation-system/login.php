@@ -1,4 +1,13 @@
-<?php if (session_status() === PHP_SESSION_NONE) session_start(); ?>
+<?php 
+if (session_status() === PHP_SESSION_NONE) session_start(); 
+require_once 'config/constants.php'; 
+
+// If user is already logged in, send them to index.php to be redirected to their dashboard
+if (isset($_SESSION['user_id'])) {
+    header('Location: ' . BASE_URL . 'index.php');
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,16 +24,11 @@
             --bg-light: #f8fafc;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-light);
-            /* Soft background pattern */
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
             background-size: 40px 40px;
             display: flex;
@@ -37,14 +41,10 @@
             background: white;
             padding: 40px;
             border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
             text-align: center;
-        }
-
-        .login-header {
-            margin-bottom: 30px;
         }
 
         .login-header h2 {
@@ -52,30 +52,14 @@
             font-weight: 800;
             color: var(--dark);
             letter-spacing: -1px;
-        }
-
-        .login-header h2 span {
-            color: var(--primary);
-        }
-
-        .login-header p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-
-        .form-group {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--dark);
             margin-bottom: 8px;
         }
+
+        .login-header h2 span { color: var(--primary); }
+        .login-header p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px; }
+
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--dark); margin-bottom: 8px; }
 
         input {
             width: 100%;
@@ -121,32 +105,26 @@
             margin-bottom: 20px;
             border: 1px solid #fecaca;
         }
-
-        .footer-text {
-            margin-top: 25px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
     </style>
 </head>
 <body>
 
 <div class="login-card">
     <div class="login-header">
-        <h2>PES<span>Admin</span></h2>
+        <h2>PES<span>login</span></h2>
         <p>Enter your credentials to access the system</p>
     </div>
 
     <?php if (isset($_GET['error'])): ?>
         <div class="error-message">
-            <strong>Invalid credentials!</strong> Please check your username and password.
+            <strong>Login Failed!</strong> Invalid username or password.
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="controllers/LoginController.php">
+    <form method="POST" action="<?= BASE_URL ?>controllers/LoginController.php">
         <div class="form-group">
             <label>Username</label>
-            <input name="username" placeholder="e.g. admin_01" required autofocus>
+            <input type="text" name="username" placeholder="e.g. admin_01" required autofocus>
         </div>
         
         <div class="form-group">
@@ -157,8 +135,8 @@
         <button type="submit">Login to Dashboard</button>
     </form>
 
-    <div class="footer-text">
-        &copy; 2025 Performance Evaluation System
+    <div style="margin-top: 25px; font-size: 0.8rem; color: var(--text-muted);">
+        &copy; 2026 Performance Evaluation System
     </div>
 </div>
 

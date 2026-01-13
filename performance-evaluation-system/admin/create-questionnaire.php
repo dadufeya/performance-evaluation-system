@@ -3,117 +3,64 @@ require_once '../config/config.php';
 require_once '../includes/auth.php';
 checkAccess('admin');
 
-// --- HANDLE ADD QUESTION ---
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_question'])) {
-    $text = trim($_POST['question_text']);
-    $type = $_POST['question_type'];
-    
-    if (!empty($text) && !empty($type)) {
-        $stmt = $pdo->prepare("INSERT INTO questions (question_text, question_type) VALUES (?, ?)");
-        $stmt->execute([$text, $type]);
-        header("Location: manage-questions.php?msg=added");
-        exit();
-    }
-}
+$msg = ""; $error = "";
+?>
 
-// --- HANDLE DELETE ---
-if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM questions WHERE question_id = ?");
-    $stmt->execute([$_GET['delete']]);
-    header("Location: manage-questions.php?msg=deleted");
-    exit();
-}
-
-$questions = $pdo->query("SELECT * FROM questions ORDER BY question_id DESC")->fetchAll();
-
+<?php
 require_once '../includes/header.php';
 require_once '../includes/sidebar-admin.php';
 ?>
 
-<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/admin-style.css">
+<style>
+.main-content { margin-left: 260px; padding: 25px; background: #f1f5f9; min-height: 100vh; font-family: sans-serif; }
+.card { background: #fff; border-radius: 8px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.btn { padding: 7px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 12px; font-weight: bold; border: none; display: inline-block; }
+.btn-blue { background: #2563eb; color: white; } .btn-green { background: #10b981; color: white; }
+.btn-red { background: #ef4444; color: white; } .btn-gray { background: #64748b; color: white; }
+input, select, textarea { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+#questions div { margin-bottom: 10px; }
+hr { border: 0; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+</style>
 
 <main class="main-content">
-    <header class="page-header">
-        <div class="page-title-area">
-            <h1 class="page-title">Questionnaire Builder</h1>
-            <p class="page-subtitle">Configure the criteria used for faculty performance evaluations.</p>
-        </div>
-    </header>
+    <h2 style="margin-top:0;">Create Questionnaire</h2>
 
-    <?php if (isset($_GET['msg'])): ?>
-        <div class="alert alert-success" style="margin-top: 20px;">
-            <?= $_GET['msg'] == 'added' ? '✅ Question added to the pool.' : '🗑️ Question removed successfully.' ?>
-        </div>
-    <?php endif; ?>
+    <?php if($msg): ?><div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #bbf7d0;"><?= $msg ?></div><?php endif; ?>
+    <?php if($error): ?><div style="background:#fee2e2; color:#b91c1c; padding:12px; border-radius:6px; margin-bottom:15px;"><?= $error ?></div><?php endif; ?>
 
-    <div class="dashboard-secondary-grid">
-        <section class="form-section">
-            <div class="section-card">
-                <h3 class="section-heading">Create New Question</h3>
-                <form method="post" class="admin-form">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom: 5px; font-weight: 600;">Question Type</label>
-                        <select name="question_type" class="form-select" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
-                            <option value="">-- Select Type --</option>
-                            <option value="rating">Rating (1-5 Scale)</option>
-                            <option value="multiple_choice">Multiple Choice</option>
-                            <option value="short_answer">Short Answer / Feedback</option>
-                        </select>
-                    </div>
+    <div class="card">
+        <form method="POST" action="save-questionnaire.php">
+            <label>Category</label>
+            <input type="text" name="category" required placeholder="Enter category name">
 
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label style="display:block; margin-bottom: 5px; font-weight: 600;">Question Text</label>
-                        <textarea name="question_text" class="form-control" rows="3" placeholder="e.g. How effective is the instructor in explaining complex topics?" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-family:inherit;"></textarea>
-                    </div>
+            <div id="questions"></div>
 
-                    <button type="submit" name="add_question" class="btn-publish" style="width: 100%; border:none; cursor:pointer;">
-                        Add to Questionnaire
-                    </button>
-                </form>
-            </div>
-        </section>
-
-        <section class="list-section">
-            <div class="section-card">
-                <h3 class="section-heading">Active Question Pool</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th width="20%">Type</th>
-                            <th width="65%">Question</th>
-                            <th width="15%" style="text-align:right;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if($questions): ?>
-                            <?php foreach ($questions as $q): ?>
-                                <tr>
-                                    <td>
-                                        <?php 
-                                            $badgeColor = ($q['question_type'] == 'rating') ? '#e0f2fe; color:#0369a1;' : '#f1f5f9; color:#475569;';
-                                        ?>
-                                        <span class="badge-pending" style="background:<?= $badgeColor ?> font-size: 0.7rem; text-transform: uppercase;">
-                                            <?= str_replace('_', ' ', $q['question_type']) ?>
-                                        </span>
-                                    </td>
-                                    <td style="font-size: 0.9rem; color:#0f172a; line-height: 1.4;">
-                                        <?= htmlspecialchars($q['question_text']) ?>
-                                    </td>
-                                    <td style="text-align:right;">
-                                        <a href="?delete=<?= $q['question_id'] ?>" 
-                                           style="color:#ef4444; text-decoration:none; font-weight:600; font-size:0.85rem;"
-                                           onclick="return confirm('Remove this question from all future evaluations?')">Delete</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="3" style="text-align:center; padding: 40px; color:#94a3b8;">No questions created yet.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            <button type="button" onclick="addQ()" class="btn btn-green">Add Question</button>
+            <button type="submit" class="btn btn-blue" style="float:right;">Save Questionnaire</button>
+        </form>
     </div>
 </main>
 
-<?php require_once '../includes/footer.php'; ?>
+<script>
+let i = 0;
+
+function addQ() {
+    const d = document.createElement('div');
+    d.innerHTML = `
+        <label>Question ${i + 1}</label>
+        <textarea name="q[${i}][text]" required placeholder="Enter question text"></textarea>
+        <select name="q[${i}][type]" required>
+            <option value="scale">Scale (1–5)</option>
+            <option value="boolean">Yes / No</option>
+            <option value="text">Text</option>
+        </select>
+        <input type="number" name="q[${i}][weight]" value="1" placeholder="Weight">
+        <button type="button" onclick="this.parentElement.remove()" class="btn btn-red" style="margin-top:5px;">Remove</button>
+        <hr>
+    `;
+    document.getElementById('questions').appendChild(d);
+    i++;
+}
+</script>
+
+<?php include '../includes/footer.php'; ?>

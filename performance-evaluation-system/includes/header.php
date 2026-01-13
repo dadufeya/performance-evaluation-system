@@ -157,25 +157,3 @@
     </div>
 </header>
 
-<aside class="sidebar">
-    <div class="sidebar-menu">
-        <div class="menu-label">Main Navigation</div>
-        <a href="dashboard.php" class="sidebar-link active">
-            <span class="icon">📊</span> Dashboard
-        </a>
-        
-        <div class="menu-label">Management</div>
-        <a href="manage-years.php" class="sidebar-link">
-            <span class="icon">📅</span> Academic Years
-        </a>
-        <a href="manage-sections.php" class="sidebar-link">
-            <span class="icon">🏫</span> Sections
-        </a>
-        <a href="manage-courses.php" class="sidebar-link">
-            <span class="icon">📚</span> Courses
-        </a>
-        <a href="manage-departments.php" class="sidebar-link">
-            <span class="icon">🏢</span> Departments
-        </a>
-    </div>
-</aside>

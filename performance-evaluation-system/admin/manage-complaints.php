@@ -13,10 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_feedback'])) {
 
 // Fetch Initial Data
 $departments = $pdo->query("SELECT * FROM departments ORDER BY department_name ASC")->fetchAll();
-$query = "SELECT c.*, u.full_name AS student_name, t.full_name AS teacher_name, d.department_name 
+$query = "SELECT c.*, 
+            u.full_name AS student_name, u.username AS sender_username, r.role_name, 
+            t.full_name AS teacher_name, t.teacher_id AS teacher_ref, tu.username AS teacher_username,
+            d.department_name 
           FROM complaints c 
           LEFT JOIN users u ON c.user_id = u.user_id
+          LEFT JOIN roles r ON u.role_id = r.role_id
           LEFT JOIN teachers t ON c.teacher_id = t.teacher_id 
+          LEFT JOIN users tu ON t.user_id = tu.user_id
           LEFT JOIN departments d ON t.department_id = d.department_id 
           ORDER BY (c.status = 'pending') DESC, c.created_at DESC";
 $complaints = $pdo->query($query)->fetchAll();
@@ -37,10 +42,10 @@ include '../includes/sidebar-admin.php';
         <table class="data-table">
             <thead>
                 <tr>
-                    <th width="35%">Student Message</th>
-                    <th width="20%">Teacher</th>
+                    <th width="35%">Sender Info & Message</th>
+                    <th width="25%">Assigned Teacher</th>
                     <th width="10%">Status</th>
-                    <th width="35%">Resolution Action</th>
+                    <th width="30%">Resolution Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,14 +53,33 @@ include '../includes/sidebar-admin.php';
                 <tr>
                     <td>
                         <div class="message-bubble" style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-                            <strong style="color:#2563eb;">From: <?= htmlspecialchars($row['student_name'] ?? 'Student') ?></strong><br>
-                            <p style="margin:5px 0; color:#475569;"><?= htmlspecialchars($row['message']) ?></p>
+                            <div style="margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
+                                <span style="font-weight:700; color:#2563eb; font-size:1.05rem;">
+                                    <?= htmlspecialchars($row['student_name'] ?? 'Unknown User') ?>
+                                </span>
+                                <div style="font-size:0.85rem; color:#64748b;">
+                                    <span>ID: <strong><?= htmlspecialchars($row['sender_username'] ?? 'N/A') ?></strong></span>
+                                    • 
+                                    <span style="text-transform:uppercase; font-size:0.75rem; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px;">
+                                        <?= htmlspecialchars($row['role_name'] ?? 'User') ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <p style="margin:5px 0; color:#475569; font-style:italic;">"<?= htmlspecialchars($row['message']) ?>"</p>
                         </div>
                     </td>
                     <td>
-                        <span style="font-weight:600; color:#1e293b;">
-                            <?= $row['teacher_name'] ? htmlspecialchars($row['teacher_name']) : '<em style="color:#94a3b8;">Not Assigned</em>' ?>
-                        </span>
+                        <?php if($row['teacher_name']): ?>
+                            <div style="line-height:1.4;">
+                                <span style="font-weight:700; color:#0f172a;"><?= htmlspecialchars($row['teacher_name']) ?></span><br>
+                                <small style="color:#64748b;">User: <?= htmlspecialchars($row['teacher_username'] ?? $row['teacher_ref']) ?></small><br>
+                                <span style="display:inline-block; margin-top:4px; font-size:0.75rem; background:#f1f5f9; padding:2px 8px; border-radius:10px; border:1px solid #cbd5e1;">
+                                    <?= htmlspecialchars($row['department_name'] ?? 'No Dept') ?>
+                                </span>
+                            </div>
+                        <?php else: ?>
+                            <em style="color:#94a3b8;">Not Assigned</em>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <span class="status-badge <?= ($row['status'] == 'resolved') ? 'bg-success' : 'bg-warning' ?>" 

@@ -1,0 +1,2 @@
+ALTER TABLE teachers
+ADD COLUMN phone VARCHAR(15) AFTER section;

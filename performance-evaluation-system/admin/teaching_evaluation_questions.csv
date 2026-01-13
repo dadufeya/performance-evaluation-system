@@ -1,0 +1,11 @@
+question_text,type,weight
+The teacher explains concepts clearly,scale,2
+The teacher is well prepared for each class,scale,2
+The teacher encourages student participation,scale,1
+The teacher uses examples that help understanding,scale,1
+The teacher starts and ends classes on time,boolean,1
+The teacher responds clearly to student questions,scale,2
+The teacher treats students fairly and respectfully,scale,2
+Course objectives were clearly explained,text,1
+What are the strengths of this teacher?,text,1
+What improvements would you suggest for this teacher?,text,1

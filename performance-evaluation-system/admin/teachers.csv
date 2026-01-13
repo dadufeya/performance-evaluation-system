@@ -1,3 +1,6 @@
-Full Name,Teacher ID,Email,Dept ID,Course,Year,Section
-Dr. Abebe Bekele,ASTU/101/T,abebe@astu.edu.et,1,Python Programming,1,A
-Prof. Martha Moss,ASTU/102/T,martha@astu.edu.et,3,Data Structures,2,B
+TeacherID,FullName,Email,Phone,DeptID,CourseID,YearID,Section
+ASTU-T201,Abel Tesfaye,abel.tesfaye@astu.edu.et,0912000001,1,9,1,A
+ASTU-T202,Biruk Alemu,biruk.alemu@astu.edu.et,0912000002,3,10,1,B
+ASTU-T203,Selamawit Bekele,selam.bekele@astu.edu.et,0912000003,4,11,2,A
+ASTU-T204,Yonas Getachew,yonas.getachew@astu.edu.et,0912000004,5,9,2,B
+ASTU-T205,Hiwot Asfaw,hiwot.asfaw@astu.edu.et,0912000005,1,10,3,C
