@@ -20,27 +20,41 @@ $stats = [
 ];
 
 try {
-    // Total Evaluations & Average Rating
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, AVG(answer) as avg_rating FROM teacher_evaluations WHERE teacher_id = ?");
+    // Total Evaluations & Average Rating (Only Released)
+    // We join with evaluations table to check the 'released' flag.
+    // Note: evaluation_responses uses 'answer_value' as the column name.
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT er.student_id) as total, AVG(CAST(er.answer_value AS UNSIGNED)) as avg_rating 
+        FROM evaluation_responses er
+        JOIN evaluations e ON er.student_id = e.student_id 
+            AND er.teacher_id = e.teacher_id 
+            AND er.course_id = e.course_id
+        WHERE er.teacher_id = ? AND e.released = 1
+    ");
     $stmt->execute([$teacher_id]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     $stats['total'] = $result['total'] ?? 0;
     $stats['avg'] = round($result['avg_rating'] ?? 0, 1);
 
-    // Performance Breakdown by Category
+    // Performance Breakdown by Category (Only Released)
+    // We join evaluation_responses -> questions -> questionnaires
     $stmt = $pdo->prepare("
-        SELECT q.category, AVG(e.answer) as score 
-        FROM teacher_evaluations e
-        JOIN evaluation_questions q ON e.question_id = q.question_id
-        WHERE e.teacher_id = ?
-        GROUP BY q.category
+        SELECT qn.title as category, AVG(CAST(er.answer_value AS UNSIGNED)) as score 
+        FROM evaluation_responses er
+        JOIN questions q ON er.question_id = q.question_id
+        JOIN questionnaires qn ON q.questionnaire_id = qn.questionnaire_id
+        JOIN evaluations e ON er.student_id = e.student_id 
+            AND er.teacher_id = e.teacher_id 
+            AND er.course_id = e.course_id
+        WHERE er.teacher_id = ? AND e.released = 1
+        GROUP BY qn.title
     ");
     $stmt->execute([$teacher_id]);
     $stats['breakdown'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Pending Complaints (Complaints submitted by the teacher)
+    // Pending Complaints
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM complaints WHERE user_id = ? AND status = 'pending'");
-    $stmt->execute([$teacher_id]); // $teacher_id is actually $_SESSION['user_id']
+    $stmt->execute([$teacher_id]);
     $stats['pending_complaints'] = $stmt->fetchColumn();
 
 } catch (PDOException $e) {

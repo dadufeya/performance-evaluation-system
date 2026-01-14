@@ -1,168 +1,170 @@
 <?php
-require_once '../config/config.php';
-session_start();
+// Start session and include necessary files
+if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config/config.php';
 
 // Security: Check if student is logged in
-if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'student') {
-    header("Location: ../login.php");
-    exit();
-}
-
-require_once '../includes/auth.php'; // Optional
-require_once '../includes/student-header.php';
-require_once '../includes/sidebar-student.php';
+checkAccess('student');
 
 $student_id = $_SESSION['user_id'];
-$evaluations = []; // Initialize to avoid warning
+$evaluations = [];
 
 // Fetch evaluation history
 try {
-    $stmt = $pdo->prepare("
-        SELECT t.full_name AS teacher_name,
-               c.course_name,
-               q.question_text,
-               q.question_type,
-               er.answer_value,
-               er.submitted_at AS created_at
+    // We prioritize joining with 'questions' (Unified System A)
+    // but fallback to 'evaluation_questions' (System B) if necessary for legacy data
+    $sql = "
+        SELECT 
+            t.full_name AS teacher_name,
+            c.course_name,
+            COALESCE(q.question_text, eq.question_text) as question_text,
+            COALESCE(q.question_type, eq.question_type) as question_type,
+            er.answer_value,
+            er.submitted_at
         FROM evaluation_responses er
-        JOIN evaluation_questions q ON er.question_id = q.question_id
+        LEFT JOIN questions q ON er.question_id = q.question_id
+        LEFT JOIN evaluation_questions eq ON er.question_id = eq.question_id
         JOIN teachers t ON er.teacher_id = t.teacher_id
         JOIN courses c ON er.course_id = c.course_id
-        WHERE er.student_id = ?
-        ORDER BY er.submitted_at DESC, t.full_name, q.question_id
-    ");
+        WHERE er.student_id = (SELECT student_id FROM students WHERE user_id = ?)
+        ORDER BY er.submitted_at DESC
+    ";
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([$student_id]);
     $evaluations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $error = "SQL Error: " . $e->getMessage(); 
+    $error = "Database Error: " . $e->getMessage();
 }
+
+// --- VIEW STARTS HERE ---
+require_once __DIR__ . '/../includes/student-header.php';
+require_once __DIR__ . '/../includes/sidebar-student.php';
 ?>
 
 <style>
-    .main-content {
-        margin-left: 260px;
-        padding: 100px 30px 30px 30px;
-        min-height: 100vh;
-        background-color: #f8fafc;
-        transition: margin-left 0.3s ease;
-    }
-
-    .card {
+    .history-card {
         background: white;
-        padding: 30px;
-        border-radius: 12px;
-        border: 1px solid #cbd5e1;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     }
 
     .history-table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         margin-top: 20px;
     }
 
-    .history-table th, .history-table td {
+    .history-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
         padding: 12px 15px;
         text-align: left;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 2px solid #e2e8f0;
     }
 
-    .history-table th {
-        background-color: #f1f5f9;
-        color: #475569;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
+    .history-table td {
+        padding: 15px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: top;
     }
 
-    .history-table tr:hover {
-        background-color: #f8fafc;
-    }
+    .history-table tr:last-child td { border-bottom: none; }
 
     .badge-score {
-        background: #e0f2fe;
-        color: #0369a1;
-        padding: 4px 8px;
+        background: #eef2ff;
+        color: #4f46e5;
+        padding: 4px 10px;
         border-radius: 6px;
         font-weight: 700;
+        font-size: 0.85rem;
+        border: 1px solid #e0e7ff;
     }
 
-    @media (max-width: 768px) {
-        .main-content { margin-left: 0; }
-        .history-table { display: block; overflow-x: auto; }
-    }
+    .badge-yes { background: #f0fdf4; color: #166534; padding: 4px 10px; border-radius: 6px; font-weight: 700; border: 1px solid #bbf7d0; }
+    .badge-no { background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-weight: 700; border: 1px solid #fecaca; }
 </style>
 
 <main class="main-content">
-    <div class="card">
-        <h2 style="margin-top:0; color: #1e293b; font-family: 'Inter', sans-serif;">My Evaluation History</h2>
-        
+    <div style="margin-bottom: 30px;">
+        <h3 style="font-size: 1.8rem; font-weight: 800; color: #1e293b; margin: 0;">Evaluation History</h3>
+        <p style="color: #64748b; margin-top: 5px;">A record of all your submitted feedback and evaluations.</p>
+    </div>
+
+    <div class="history-card">
         <?php if (isset($error)): ?>
-            <div style="padding:15px; background:#fef2f2; color:#991b1b; border-radius:8px; margin-bottom:20px;">
-                <?= $error ?>
+            <div style="padding:15px; background:#fef2f2; color:#dc2626; border-radius:10px; border:1px solid #fee2e2; margin-bottom:20px;">
+                <i class="fas fa-exclamation-circle"></i> <?= $error ?>
             </div>
         <?php endif; ?>
 
-        <?php if (!$evaluations): ?>
-            <p style="color:#64748b; font-style:italic;">You haven't submitted any evaluations yet.</p>
+        <?php if (empty($evaluations)): ?>
+            <div style="text-align:center; padding:40px;">
+                <i class="fas fa-history" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px; display: block;"></i>
+                <p style="color:#64748b; font-size: 1.1rem; margin:0;">You haven't submitted any evaluations yet.</p>
+            </div>
         <?php else: ?>
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th width="20%">Teacher</th>
-                        <th width="20%">Course</th>
-                        <th width="30%">Question</th>
-                        <th width="15%">Your Answer</th>
-                        <th width="15%">Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($evaluations as $ev): ?>
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
                         <tr>
-                            <td style="font-weight:600; color:#1e293b;"><?= htmlspecialchars($ev['teacher_name']) ?></td>
-                            <td><?= htmlspecialchars($ev['course_name']) ?></td>
-                            <td style="color:#475569; font-size:0.95rem;"><?= htmlspecialchars($ev['question_text']) ?></td>
-                            <td>
-                                <?php
-                                    $val = $ev['answer_value'];
-                                    // Make sure type exists, defaulting to text if not
-                                    $type = $ev['question_type'] ?? 'text';
-                                    
-                                    if ($type === 'scale' || $type === 'rating') {
-                                        echo '<span class="badge-score">'.htmlspecialchars($val).' / 5</span>';
-                                    } elseif ($type === 'boolean' || $type === 'yesno') {
-                                        echo ($val == '1' || strtolower($val) == 'yes') ? '<b>Yes</b>' : 'No';
-                                    } else {
-                                        echo '<em style="color:#64748b;">"'.htmlspecialchars(substr($val, 0, 50)).(strlen($val)>50?'...':'').'"</em>';
-                                    }
-                                ?>
-                            </td>
-                            <td style="color:#64748b; font-size:0.9rem;">
-                                <?= date("M d, Y", strtotime($ev['created_at'])) ?>
-                            </td>
+                            <th>Teacher</th>
+                            <th>Course</th>
+                            <th>Question</th>
+                            <th>Response</th>
+                            <th>Submitted At</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($evaluations as $ev): ?>
+                            <tr>
+                                <td>
+                                    <div style="font-weight:700; color:#1e293b;"><?= htmlspecialchars($ev['teacher_name']) ?></div>
+                                </td>
+                                <td>
+                                    <div style="color:#475569; font-size:0.9rem;"><?= htmlspecialchars($ev['course_name']) ?></div>
+                                </td>
+                                <td>
+                                    <div style="color:#64748b; font-size:0.9rem; max-width: 300px;"><?= htmlspecialchars($ev['question_text']) ?></div>
+                                </td>
+                                <td>
+                                    <?php
+                                        $val = $ev['answer_value'];
+                                        $type = $ev['question_type'] ?? 'text';
+                                        
+                                        if (in_array($type, ['scale', 'rating'])) {
+                                            echo '<span class="badge-score">'.htmlspecialchars($val).' / 5</span>';
+                                        } elseif (in_array($type, ['boolean', 'yesno'])) {
+                                            if ($val == '1' || strtolower($val) == 'yes') {
+                                                echo '<span class="badge-yes">Yes</span>';
+                                            } else {
+                                                echo '<span class="badge-no">No</span>';
+                                            }
+                                        } else {
+                                            echo '<div style="font-style:italic; color:#64748b; font-size:0.9rem;">"'.htmlspecialchars($val).'"</div>';
+                                        }
+                                    ?>
+                                </td>
+                                <td>
+                                    <div style="color:#64748b; font-size:0.85rem;">
+                                        <?= date("M d, Y", strtotime($ev['submitted_at'])) ?>
+                                        <br>
+                                        <small><?= date("h:i A", strtotime($ev['submitted_at'])) ?></small>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </div>
 </main>
 
-<script>
-    // Responsive Sidebar Logic (Optional, matches others)
-    function fixLayout() {
-        const content = document.querySelector('.main-content');
-        const sidebar = document.querySelector('.student-sidebar');
-        if (content && sidebar) {
-            // Logic handled by CSS variable usually, but hardcoded fallback:
-            content.style.marginLeft = sidebar.offsetWidth + "px";
-        }
-    }
-    window.addEventListener('resize', fixLayout);
-    // window.addEventListener('load', fixLayout); // CSS handles basic case
-</script>
-
-<?php 
-$footer_path = __DIR__ . "/../includes/student-footer.php";
-if (file_exists($footer_path)) { include_once($footer_path); }
-?>
+<?php require_once '../includes/footer.php'; ?>

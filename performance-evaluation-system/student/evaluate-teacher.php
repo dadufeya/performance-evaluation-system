@@ -1,156 +1,164 @@
 <?php
-require_once '../config/config.php';
-session_start();
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/auth.php';
 
-// Security: Check if student is logged in
-if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'student') {
-    header("Location: ../login.php");
-    exit();
+// Ensure only students can access
+checkAccess('student');
+
+// Get teacher and course from URL
+$tid = $_GET['teacher_id'] ?? null;
+$cid = $_GET['course_id'] ?? null;
+$student_id = $_SESSION['user_id'];
+
+if (!$tid || !$cid) {
+    die("Teacher or Course not specified.");
 }
 
-require_once '../includes/auth.php'; // Optional, but good practice
-require_once '../includes/student-header.php';
-require_once '../includes/sidebar-student.php';
+// Fetch teacher and course names for display
+try {
+    $stmtT = $pdo->prepare("SELECT full_name FROM teachers WHERE teacher_id = ?");
+    $stmtT->execute([$tid]);
+    $teacher_name = $stmtT->fetchColumn();
 
-$student_id = $_SESSION['user_id'];
+    $stmtC = $pdo->prepare("SELECT course_name FROM courses WHERE course_id = ?");
+    $stmtC->execute([$cid]);
+    $course_name = $stmtC->fetchColumn();
+    
+    // Check if student already evaluated this teacher/course
+    // 1. Map user_id to student_id
+    $stmtS = $pdo->prepare("SELECT student_id FROM students WHERE user_id = ?");
+    $stmtS->execute([$student_id]);
+    $real_student_id = $stmtS->fetchColumn();
+    
+    $checkEval = $pdo->prepare("SELECT evaluation_id FROM evaluations WHERE student_id = ? AND teacher_id = ? AND course_id = ?");
+    $checkEval->execute([$real_student_id, $tid, $cid]);
+    $already_evaluated = $checkEval->fetch();
+
+} catch (PDOException $e) {
+    die("Database error: " . $e->getMessage());
+}
+
+// --- VIEW STARTS HERE ---
+require_once __DIR__ . '/../includes/student-header.php';
+require_once __DIR__ . '/../includes/sidebar-student.php';
 ?>
 
-<style>
-    /* Ensure content is pushed correctly */
-    .main-content {
-        margin-left: 260px;
-        padding: 100px 30px 30px 30px; /* Adjust top padding for fixed header */
-        min-height: 100vh;
-        background-color: #f8fafc;
-    }
-    /* Responsive adjustment */
-    @media (max-width: 768px) {
-        .main-content { margin-left: 0; }
-    }
-</style>
-
 <main class="main-content">
-    <div style="background: white; padding: 30px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-        <h2 style="margin-top:0; color: #1e293b; font-family: 'Inter', sans-serif;">Teacher Evaluation Form</h2>
-        
-        <!-- Selection Form -->
-        <form method="POST" style="margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <div style="display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight:bold;">Select Teacher</label>
-                    <select name="teacher_id" required style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ccc;">
-                        <option value="">-- Choose Teacher --</option>
-                        <?php 
-                        // Fetch Teachers linked to Student's Year/Section
-                        $stmt = $pdo->prepare("
-                            SELECT DISTINCT t.teacher_id, t.full_name 
-                            FROM teacher_course tc
-                            JOIN teachers t ON tc.teacher_id = t.teacher_id
-                            JOIN students s ON s.year_id = tc.year_id AND s.section_id = tc.section_id
-                            WHERE s.user_id = ?
-                            ORDER BY t.full_name
-                        ");
-                        $stmt->execute([$student_id]);
-                        $teachers = $stmt->fetchAll();
-
-                        foreach ($teachers as $t): ?>
-                            <option value="<?= $t['teacher_id'] ?>" <?= (($_POST['teacher_id'] ?? '') == $t['teacher_id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($t['full_name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight:bold;">Select Course</label>
-                    <select name="course_id" required style="width:100%; padding:10px; margin-top:5px; border-radius:5px; border:1px solid #ccc;">
-                        <option value="">-- Choose Course --</option>
-                        <?php 
-                        // Fetch Courses linked to Student's Year/Section
-                        $stmt = $pdo->prepare("
-                            SELECT DISTINCT c.course_id, c.course_name 
-                            FROM teacher_course tc
-                            JOIN courses c ON tc.course_id = c.course_id
-                            JOIN students s ON s.year_id = tc.year_id AND s.section_id = tc.section_id
-                            WHERE s.user_id = ?
-                            ORDER BY c.course_name
-                        ");
-                        $stmt->execute([$student_id]);
-                        $courses = $stmt->fetchAll();
-
-                        foreach ($courses as $c): ?>
-                            <option value="<?= $c['course_id'] ?>" <?= (($_POST['course_id'] ?? '') == $c['course_id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($c['course_name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+    <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <div style="width: 50px; height: 50px; background: #6366f1; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                <i class="fas fa-edit"></i>
             </div>
-            <button type="submit" style="background:#6366f1; color:white; border:none; padding:12px 25px; border-radius:5px; cursor:pointer; font-weight:bold;">
-                Load Questions
-            </button>
-        </form>
+            <div>
+                <h3 style="margin:0; font-size: 1.5rem; color: #1e293b;">Evaluate Teacher</h3>
+                <p style="margin:5px 0 0; color: #64748b;">Providing honest feedback helps improve educational quality.</p>
+            </div>
+        </div>
 
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 15px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div>
+                <small style="color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">Teacher Name</small>
+                <div style="font-weight: 700; color: #1e293b;"><?= htmlspecialchars($teacher_name) ?></div>
+            </div>
+            <div>
+                <small style="color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">Course Title</small>
+                <div style="font-weight: 700; color: #1e293b;"><?= htmlspecialchars($course_name) ?></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="evaluation-form-container">
         <?php 
-        if (isset($_POST['teacher_id'], $_POST['course_id'])): 
-            $tid = $_POST['teacher_id'];
-            $cid = $_POST['course_id'];
+        if ($already_evaluated) {
+            echo "<div style='padding:40px; background:white; border:1px solid #e2e8f0; border-radius:15px; text-align:center;'>
+                    <div style='width:60px; height:60px; background:#f0fdf4; color:#16a34a; border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 20px; font-size:2rem;'>
+                        <i class='fas fa-check-circle'></i>
+                    </div>
+                    <h4 style='color:#1e293b; margin:0 0 10px;'>Already Submitted</h4>
+                    <p style='color:#64748b; margin:0;'>You have already completed the evaluation for this teacher and course. Thank you for your feedback!</p>
+                    <a href='my-teachers.php' style='display:inline-block; margin-top:20px; color:#6366f1; text-decoration:none; font-weight:600;'>Return to My Teachers</a>
+                  </div>";
+        } else {
+            // === FETCH ASSIGNED QUESTIONNAIRE ID ===
+            $assignStmt = $pdo->prepare("
+                SELECT ea.questionnaire_id 
+                FROM evaluation_assignments ea
+                JOIN students s ON s.department_id = ea.department_id
+                WHERE s.user_id = ? 
+                AND ea.teacher_id = ? 
+                AND ea.course_id = ?
+                AND (ea.section = s.section_id OR ea.section = (SELECT section_number FROM sections WHERE section_id = s.section_id))
+                AND ea.status = 'active'
+                ORDER BY ea.created_at DESC
+                LIMIT 1
+            ");
+            $assignStmt->execute([$student_id, $tid, $cid]);
+            $assignment = $assignStmt->fetch();
+            $questionnaire_id = $assignment['questionnaire_id'] ?? null;
 
-            // === CRITICAL CHECK: Has student already evaluated this teacher/course? ===
-            $checkStmt = $pdo->prepare("SELECT evaluation_id FROM evaluations WHERE student_id=? AND teacher_id=? AND course_id=?");
-            $checkStmt->execute([$student_id, $tid, $cid]);
-            
-            if ($checkStmt->fetch()) {
-                echo "<div style='padding:15px; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:8px; margin-bottom:20px;'>
-                        <strong>⚠️ Notice:</strong> You have already submitted an evaluation for this teacher in this course. Duplicate submissions are not accepted.
+            if (!$questionnaire_id) {
+                echo "<div style='padding:40px; background:white; border:1px solid #fee2e2; border-radius:15px; text-align:center;'>
+                        <div style='width:60px; height:60px; background:#fef2f2; color:#dc2626; border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 20px; font-size:2rem;'>
+                            <i class='fas fa-exclamation-triangle'></i>
+                        </div>
+                        <h4 style='color:#1e293b; margin:0 0 10px;'>Assignment Not Found</h4>
+                        <p style='color:#64748b; margin:0;'>No active evaluation has been assigned to you for this teacher/course yet.</p>
                       </div>";
             } else {
-                // Not evaluated yet? Show the form!
-                $questions = $pdo->query("SELECT * FROM evaluation_questions ORDER BY question_id")->fetchAll();
+                $qStmt = $pdo->prepare("SELECT * FROM questions WHERE questionnaire_id = ? ORDER BY question_id");
+                $qStmt->execute([$questionnaire_id]);
+                $questions = $qStmt->fetchAll();
                 
-                if (!$questions): ?>
-                    <p>No questions found in the database.</p>
-                <?php else: ?>
-                    <form method="POST" action="save-evaluation.php">
+                if (!$questions) {
+                    echo "<p style='text-align:center; padding:40px; color:#64748b;'>This evaluation currently has no questions.</p>";
+                } else {
+                    ?>
+                    <form method="POST" action="save-evaluation.php" style="display: grid; gap: 20px;">
                         <input type="hidden" name="teacher_id" value="<?= htmlspecialchars($tid) ?>">
                         <input type="hidden" name="course_id" value="<?= htmlspecialchars($cid) ?>">
+                        <input type="hidden" name="questionnaire_id" value="<?= htmlspecialchars($questionnaire_id) ?>">
 
                         <?php foreach ($questions as $q): ?>
-                            <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #f1f5f9; border-left: 5px solid #6366f1; border-radius: 8px; background:#fff;">
-                                <p style="margin-top:0; font-size:1.1rem; color:#1e293b;"><strong><?= htmlspecialchars($q['question_text']) ?></strong></p>
+                            <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #e2e8f0; border-left: 6px solid #6366f1;">
+                                <p style="margin: 0 0 20px; font-size: 1.1rem; font-weight: 700; color: #1e293b;"><?= htmlspecialchars($q['question_text']) ?></p>
                                 
                                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                <?php if ($q['question_type'] === 'scale'): ?>
+                                <?php if ($q['question_type'] === 'rating' || $q['question_type'] === 'scale'): ?>
                                     <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <label style="background:#f8fafc; padding:8px 15px; border-radius:5px; cursor:pointer; border:1px solid #e2e8f0;">
-                                            <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="<?= $i ?>" required> <?= $i ?>
+                                        <label style="background: #f8fafc; padding: 12px 20px; border-radius: 10px; cursor: pointer; border: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; transition: 0.3s; font-weight: 600;">
+                                            <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="<?= $i ?>" required style="accent-color: #6366f1; width: 18px; height: 18px;">
+                                            <span><?= $i ?></span>
                                         </label>
                                     <?php endfor; ?>
-                                <?php elseif ($q['question_type'] === 'boolean'): ?>
-                                    <label style="background:#f8fafc; padding:8px 15px; border-radius:5px; cursor:pointer; border:1px solid #e2e8f0;">
-                                        <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="1" required> Yes
+                                <?php elseif ($q['question_type'] === 'yesno' || $q['question_type'] === 'boolean'): ?>
+                                    <label style="background: #f8fafc; padding: 12px 20px; border-radius: 10px; cursor: pointer; border: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; transition: 0.3s; font-weight: 600;">
+                                        <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="1" required style="accent-color: #6366f1; width: 18px; height: 18px;">
+                                        <span>Yes</span>
                                     </label>
-                                    <label style="background:#f8fafc; padding:8px 15px; border-radius:5px; cursor:pointer; border:1px solid #e2e8f0;">
-                                        <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="0"> No
+                                    <label style="background: #f8fafc; padding: 12px 20px; border-radius: 10px; cursor: pointer; border: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; transition: 0.3s; font-weight: 600;">
+                                        <input type="radio" name="answers[<?= $q['question_id'] ?>]" value="0" style="accent-color: #6366f1; width: 18px; height: 18px;">
+                                        <span>No</span>
                                     </label>
                                 <?php else: ?>
-                                    <textarea name="answers[<?= $q['question_id'] ?>]" style="width:100%; height:80px; padding:10px; border-radius:5px; border:1px solid #cbd5e1;" required placeholder="Write your feedback here..."></textarea>
+                                    <textarea name="answers[<?= $q['question_id'] ?>]" style="width: 100%; min-height: 120px; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0; font-family: inherit; font-size: 1rem; outline: none; transition: 0.3s;" required placeholder="Please provide your detailed feedback..."></textarea>
                                 <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
 
-                        <button type="submit" style="background: #10b981; color: white; padding: 15px 40px; border:none; border-radius:8px; cursor:pointer; font-size:1.1rem; font-weight:bold; width:100%;">
-                            Submit Evaluation
-                        </button>
+                        <div style="margin-top: 10px;">
+                            <button type="submit" style="background: #6366f1; color: white; padding: 18px; border: none; border-radius: 12px; cursor: pointer; font-size: 1.1rem; font-weight: 800; width: 100%; transition: 0.3s; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                                <span>Submit Evaluation</span>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </form>
-                <?php endif; 
-            }
-        endif; 
+                    <?php 
+                } // questions else
+            } // questionnaire_id else
+        } // already evaluated else
         ?>
     </div>
 </main>
 
-<?php 
-$footer_path = __DIR__ . "/../includes/student-footer.php";
-if (file_exists($footer_path)) { include_once($footer_path); }
-?>
+<?php require_once '../includes/footer.php'; ?>

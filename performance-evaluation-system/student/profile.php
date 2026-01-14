@@ -1,12 +1,11 @@
 <?php
-require_once '../includes/auth.php';
-// Ensure only students can access this
-checkAccess('student'); 
-require_once '../config/config.php'; 
+// Start session and include necessary files
+if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config/config.php';
 
-// Use the attractive student header and sidebar
-require_once '../includes/student-header.php'; 
-require_once '../includes/sidebar-student.php'; 
+// Security: Check if student is logged in
+checkAccess('student');
 
 $user_id = $_SESSION['user_id'];
 $error_message = "";
@@ -14,10 +13,9 @@ $success_message = "";
 
 // --- 1. FETCH DATA REGISTERED BY ADMIN ---
 try {
-    // We use LEFT JOIN so the page still loads even if the admin hasn't assigned a year/section yet
     $stmt = $pdo->prepare("
         SELECT 
-            u.username, u.email, 
+            u.username, 
             s.full_name, s.student_id_card, s.gender, s.batch,
             d.department_name,
             y.year_name,
@@ -32,16 +30,20 @@ try {
     $stmt->execute([$user_id]);
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // If the record is missing for some reason, create an empty fallback array to prevent errors
     if (!$student) {
         $student = [
             'full_name' => 'Not Found', 'student_id_card' => 'N/A', 'gender' => 'N/A',
             'batch' => 'N/A', 'department_name' => 'Unassigned', 'year_name' => 'N/A',
-            'section_number' => 'N/A', 'username' => 'N/A', 'email' => 'N/A'
+            'section_number' => 'N/A', 'username' => 'N/A'
         ];
     }
 } catch (PDOException $e) {
-    $error_message = "System Error: Unable to fetch profile. " . $e->getMessage();
+    $error_message = "System Error: Unable to fetch profile.";
+    $student = [
+        'full_name' => 'Error Loading', 'student_id_card' => 'N/A', 'gender' => 'N/A',
+        'batch' => 'N/A', 'department_name' => 'N/A', 'year_name' => 'N/A',
+        'section_number' => 'N/A', 'username' => 'N/A'
+    ];
 }
 
 // --- 2. HANDLE PASSWORD UPDATE ---
@@ -55,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
     } elseif (strlen($new_pass) < 6) {
         $error_message = "New password must be at least 6 characters.";
     } else {
-        // Verify current password first
         $vStmt = $pdo->prepare("SELECT password FROM users WHERE user_id = ?");
         $vStmt->execute([$user_id]);
         $user_row = $vStmt->fetch();
@@ -70,101 +71,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
         }
     }
 }
+
+// --- VIEW STARTS HERE ---
+require_once '../includes/student-header.php';
+require_once '../includes/sidebar-student.php';
 ?>
 
 <style>
-    .profile-container { margin-left: 280px; padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; min-height: 100vh; }
-    .page-title { margin-bottom: 30px; }
-    .page-title h1 { color: #1e293b; font-size: 24px; font-weight: 700; margin: 0; }
-    .page-title p { color: #64748b; margin-top: 5px; }
+    .profile-card { background: #fff; border-radius: 15px; border: 1px solid #e2e8f0; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .card-title { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
+    .card-title i { color: #6366f1; font-size: 20px; }
+    .card-title h3 { margin: 0; color: #1e293b; font-size: 1.2rem; }
 
-    .profile-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 25px; }
-    .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
-    .card-header i { color: #3b82f6; font-size: 20px; }
-    .card-header h3 { margin: 0; color: #334155; font-size: 18px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+    .info-item label { display: block; font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; }
+    .info-item div { font-size: 1rem; color: #1e293b; font-weight: 500; }
+    
+    .badge-id { background: #eef2ff; color: #4f46e5; padding: 4px 12px; border-radius: 50px; font-weight: 700; font-size: 0.8rem; border: 1px solid #e0e7ff; }
 
-    /* Info Display Styling */
-    .info-list { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .info-group { margin-bottom: 15px; }
-    .info-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-    .info-value { font-size: 15px; color: #1e293b; font-weight: 500; margin-top: 4px; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #eff6ff; color: #2563eb; font-weight: 600; font-size: 12px; }
-
-    /* Form Styling */
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; }
-    .form-control { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; transition: 0.2s; box-sizing: border-box; }
-    .form-control:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    .btn-save { background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; transition: 0.2s; }
-    .btn-save:hover { background: #1d4ed8; }
-
-    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
-    .alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-
-    @media (max-width: 992px) { .profile-container { margin-left: 0; padding: 20px; } .profile-grid { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
+    .form-control { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; outline: none; transition: 0.3s; }
+    .form-control:focus { border-color: #6366f1; }
+    
+    .btn-update { background: #6366f1; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.3s; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.2); }
+    .btn-update:hover { background: #4f46e5; }
 </style>
 
-<div class="profile-container">
-    <div class="page-title">
-        <h1>My Profile</h1>
-        <p>This information is managed by the Admin. Please contact them for corrections.</p>
+<main class="main-content">
+    <div style="margin-bottom: 30px;">
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #1e293b; margin: 0;">My Profile</h1>
+        <p style="color: #64748b; margin-top: 5px;">Manage your account information and academic details.</p>
     </div>
 
     <?php if ($error_message): ?>
-        <div class="alert alert-error"><i class="fas fa-times-circle"></i> <?= $error_message ?></div>
+        <div style="padding:15px; background:#fef2f2; color:#dc2626; border-radius:10px; border:1px solid #fee2e2; margin-bottom:25px;">
+            <i class="fas fa-exclamation-circle"></i> <?= $error_message ?>
+        </div>
     <?php endif; ?>
 
     <?php if ($success_message): ?>
-        <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= $success_message ?></div>
+        <div style="padding:15px; background:#f0fdf4; color:#166534; border-radius:10px; border:1px solid #bbf7d0; margin-bottom:25px;">
+            <i class="fas fa-check-circle"></i> <?= $success_message ?>
+        </div>
     <?php endif; ?>
 
-    <div class="profile-grid">
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-id-card"></i>
-                <h3>Academic Profile</h3>
+    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 25px;">
+        <!-- Academic Info -->
+        <div class="profile-card">
+            <div class="card-title">
+                <i class="fas fa-graduation-cap"></i>
+                <h3>Academic Details</h3>
             </div>
-            <div class="info-list">
-                <div class="info-group">
-                    <div class="info-label">Full Name</div>
-                    <div class="info-value"><?= htmlspecialchars($student['full_name']) ?></div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Full Name</label>
+                    <div><?= htmlspecialchars($student['full_name']) ?></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Student ID</div>
-                    <div class="info-value"><span class="badge"><?= htmlspecialchars($student['student_id_card']) ?></span></div>
+                <div class="info-item">
+                    <label>Student ID</label>
+                    <div><span class="badge-id"><?= htmlspecialchars($student['student_id_card']) ?></span></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Department</div>
-                    <div class="info-value"><?= htmlspecialchars($student['department_name'] ?? 'Not Set') ?></div>
+                <div class="info-item">
+                    <label>Department</label>
+                    <div><?= htmlspecialchars($student['department_name'] ?? 'Unassigned') ?></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Academic Year</div>
-                    <div class="info-value"><?= htmlspecialchars($student['year_name'] ?? 'N/A') ?></div>
+                <div class="info-item">
+                    <label>Year / Section</label>
+                    <div><?= htmlspecialchars($student['year_name'] ?? 'N/A') ?> - Section <?= htmlspecialchars($student['section_number'] ?? 'N/A') ?></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Section</div>
-                    <div class="info-value">Section <?= htmlspecialchars($student['section_number'] ?? 'N/A') ?></div>
+                <div class="info-item">
+                    <label>Batch</label>
+                    <div><?= htmlspecialchars($student['batch']) ?></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Batch</div>
-                    <div class="info-value"><?= htmlspecialchars($student['batch']) ?></div>
+                <div class="info-item">
+                    <label>Gender</label>
+                    <div><?= htmlspecialchars($student['gender']) ?></div>
                 </div>
-                <div class="info-group">
-                    <div class="info-label">Gender</div>
-                    <div class="info-value"><?= htmlspecialchars($student['gender']) ?></div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Login Username</div>
-                    <div class="info-value" style="color: #6366f1;"><?= htmlspecialchars($student['username']) ?></div>
+                <div class="info-item">
+                    <label>Username</label>
+                    <div style="color: #6366f1; font-weight: 700;"><?= htmlspecialchars($student['username']) ?></div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-shield-alt"></i>
+        <!-- Security -->
+        <div class="profile-card">
+            <div class="card-title">
+                <i class="fas fa-lock"></i>
                 <h3>Account Security</h3>
             </div>
             <form method="POST">
@@ -180,12 +174,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
                     <label>Confirm New Password</label>
                     <input type="password" name="confirm_password" class="form-control" placeholder="Repeat new password" required>
                 </div>
-                <button type="submit" name="update_password" class="btn-save">
-                    Change Password
+                <button type="submit" name="update_password" class="btn-update">
+                    Update Password
                 </button>
             </form>
         </div>
     </div>
-</div>
+</main>
 
-<?php include '../includes/footer.php'; ?>
+<?php require_once '../includes/footer.php'; ?>

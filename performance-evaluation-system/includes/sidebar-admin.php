@@ -56,11 +56,7 @@ try {
             Academic Years
         </a>
 
-        <a href="manage-departments.php"
-           class="sidebar-link <?= ($current_page === 'manage-departments.php') ? 'active' : '' ?>">
-            <span class="icon">🏫</span>
-            Departments
-        </a>
+     
 
         <a href="manage-courses.php"
            class="sidebar-link <?= ($current_page === 'manage-courses.php') ? 'active' : '' ?>">
@@ -71,11 +67,7 @@ try {
         <!-- ================= EVALUATION WORKFLOW ================= -->
         <div class="menu-label">Evaluation Workflow</div>
 
-        <a href="create-questionnaire.php"
-           class="sidebar-link <?= ($current_page === 'create-questionnaire.php') ? 'active' : '' ?>">
-            <span class="icon">📝</span>
-            Questionnaire
-        </a>
+       
 
         <a href="create-evaluation.php"
            class="sidebar-link <?= ($current_page === 'create-evaluation.php') ? 'active' : '' ?>">
@@ -119,10 +111,7 @@ try {
             Profile
         </a>
 
-        <a href="../logout.php" class="sidebar-link">
-            <span class="icon">🚪</span>
-            Logout
-        </a>
+     
 
     </div>
 </aside>

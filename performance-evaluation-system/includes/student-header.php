@@ -71,6 +71,22 @@
             justify-content: center;
             font-weight: bold;
         }
+
+        /* --- GLOBAL LAYOUT CONTAINER --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 100px 30px 30px 30px; /* Space for fixed header */
+            min-height: calc(100vh - 70px);
+            background-color: #f8fafc;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .student-header { left: 0; }
+            .main-content { margin-left: 0; padding-top: 80px; }
+        }
     </style>
 </head>
 <body>

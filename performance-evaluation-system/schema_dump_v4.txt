@@ -1,0 +1,36 @@
+
+--- questionnaires ---
+questionnaire_id (int(11))
+title (varchar(100))
+description (text)
+status (enum('active','inactive'))
+created_at (timestamp)
+academic_year_id (int(11))
+semester (varchar(20))
+
+--- questions ---
+question_id (int(11))
+questionnaire_id (int(11))
+question_text (varchar(255))
+question_type (enum('rating','yesno','text'))
+max_score (int(11))
+created_at (timestamp)
+
+--- evaluation_questions ---
+question_id (int(11))
+category (varchar(100))
+question_text (text)
+question_type (enum('scale','boolean','text'))
+weight (int(11))
+created_at (timestamp)
+
+--- evaluation_assignments ---
+assignment_id (int(11))
+questionnaire_id (int(11))
+department_id (int(11))
+year (int(11))
+section (varchar(10))
+course_id (int(11))
+teacher_id (varchar(50))
+status (enum('active','closed'))
+created_at (timestamp)

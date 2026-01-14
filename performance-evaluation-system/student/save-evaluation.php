@@ -9,18 +9,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die("Invalid request.");
 }
 
-// Get student ID from session
-$student_id = $_SESSION['user_id'] ?? null;
-if (!$student_id) {
-    die("Student not logged in.");
+// Get student ID from session and map to students table student_id
+$stmtS = $pdo->prepare("SELECT student_id FROM students WHERE user_id = ?");
+$stmtS->execute([$_SESSION['user_id']]);
+$student_info = $stmtS->fetch();
+$real_student_id = $student_info['student_id'] ?? null;
+
+if (!$real_student_id) {
+    die("Student profile not found.");
 }
 
-// Get Teacher and Course IDs
+// Get Teacher, Course, and Questionnaire IDs
 $teacher_id = $_POST['teacher_id'] ?? null;
 $course_id = $_POST['course_id'] ?? null;
+$questionnaire_id = $_POST['questionnaire_id'] ?? null;
 
-if (!$teacher_id || !$course_id) {
-    die("Missing teacher or course information.");
+if (!$teacher_id || !$course_id || !$questionnaire_id) {
+    die("Missing evaluation information.");
 }
 
 // Prepare submitted answers
@@ -34,30 +39,26 @@ try {
     // Start transaction
     $pdo->beginTransaction();
 
-    // 2. Already Evaluated Check (Redundant safety check)
-    // (This matches the new logic: prevent duplicate entries per teacher/course)
-    // We do NOT create an 'evaluations' parent record because the table doesn't seem to link correctly.
-    // Instead we check if any response exists.
-    
-    $check = $pdo->prepare("SELECT response_id FROM evaluation_responses WHERE student_id=? AND teacher_id=? AND course_id=? LIMIT 1");
-    $check->execute([$student_id, $teacher_id, $course_id]);
+    // 2. Already Evaluated Check
+    $check = $pdo->prepare("SELECT evaluation_id FROM evaluations WHERE student_id=? AND teacher_id=? AND course_id=? LIMIT 1");
+    $check->execute([$real_student_id, $teacher_id, $course_id]);
     if ($check->fetch()) {
          die("You have already submitted an evaluation for this teacher and course.");
     }
 
+    // 3. Create Parent Evaluation Record (for status/release tracking)
+    $evalStmt = $pdo->prepare("
+        INSERT INTO evaluations (student_id, teacher_id, course_id, questionnaire_id, released, submitted_at)
+        VALUES (?, ?, ?, ?, 0, NOW())
+    ");
+    $evalStmt->execute([$real_student_id, $teacher_id, $course_id, $questionnaire_id]);
+    $parent_evaluation_id = $pdo->lastInsertId();
+
     $inserted = 0;
-
     foreach ($answers as $question_id => $answer) {
-        $val = '';
-        if (is_array($answer)) {
-            $val = implode(',', $answer); 
-        } else {
-            $val = trim($answer);
-            // Quick cleanup for boolean '1'/'0' or text
-        }
+        $val = is_array($answer) ? implode(',', $answer) : trim($answer);
 
-        // Insert response using verified schema:
-        // (question_id, student_id, teacher_id, course_id, answer_value, submitted_at)
+        // Insert response
         $stmt = $pdo->prepare("
             INSERT INTO evaluation_responses
             (question_id, student_id, teacher_id, course_id, answer_value, submitted_at)
@@ -65,7 +66,7 @@ try {
         ");
         $stmt->execute([
             $question_id,
-            $student_id,
+            $real_student_id,
             $teacher_id,
             $course_id,
             $val

@@ -17,10 +17,12 @@ $error = "";
 // Handle Send
 if (isset($_POST['send_complaint'])) {
     $message = trim($_POST['message']);
+    $about_teacher_id = $_POST['about_teacher_id'] ?? null; // Teacher being complained about
+    
     if (!empty($message)) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO complaints (user_id, message, status, created_at) VALUES (?, ?, 'pending', NOW())");
-            $stmt->execute([$_SESSION['user_id'], $message]);
+            $stmt = $pdo->prepare("INSERT INTO complaints (user_id, message, teacher_id, status, created_at) VALUES (?, ?, ?, 'pending', NOW())");
+            $stmt->execute([$_SESSION['user_id'], $message, $about_teacher_id]);
             $msg = "Complaint submitted successfully. The administration has been notified.";
         } catch (PDOException $e) {
             $error = "Error submitting complaint: " . $e->getMessage();
@@ -28,6 +30,15 @@ if (isset($_POST['send_complaint'])) {
     } else {
         $error = "Please enter a message.";
     }
+}
+
+// Fetch all teachers for the dropdown
+$teachers = [];
+try {
+    $stmt = $pdo->query("SELECT teacher_id, full_name, department_id FROM teachers ORDER BY full_name ASC");
+    $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Error fetching teachers: " . $e->getMessage());
 }
 
 // Fetch my complaints
@@ -69,6 +80,20 @@ try {
                 <i class="fas fa-pen"></i> Submit New Complaint
             </h3>
             <form method="post">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #475569;">Complaint About (Optional)</label>
+                    <select name="about_teacher_id" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: sans-serif;">
+                        <option value="">General Complaint (Not about a specific teacher)</option>
+                        <?php foreach ($teachers as $t): ?>
+                            <option value="<?= htmlspecialchars($t['teacher_id']) ?>">
+                                <?= htmlspecialchars($t['full_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color: #64748b; display: block; margin-top: 5px;">
+                        If this complaint is about a specific teacher, select their name. Otherwise, leave as "General Complaint".
+                    </small>
+                </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #475569;">Description of Issue</label>
                     <textarea name="message" required rows="4" 

@@ -3,7 +3,8 @@ require_once '../includes/auth.php';
 require_once '../config/config.php';
 checkAccess('admin');
 
-$msg = ""; $error = "";
+$msg = $_GET['msg'] ?? ""; 
+$error = "";
 
 /* ===============================
     1. ACTION HANDLERS
@@ -28,41 +29,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset') {
 // --- DELETE ASSIGNMENT ---
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     try {
-        $stmt = $pdo->prepare("DELETE FROM teachers WHERE teacher_id = ? AND course_info = ? AND section = ?");
-        $stmt->execute([$_GET['tid'], $_GET['course'], $_GET['sec']]);
+        $stmt = $pdo->prepare("DELETE FROM teachers WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
         $msg = "Assignment removed successfully.";
-    } catch (Exception $e) { $error = "Delete failed."; }
+    } catch (Exception $e) { $error = "Delete failed: " . $e->getMessage(); }
 }
 
-// --- EDIT UPDATE (Sync Username with First Name) ---
+// --- EDIT UPDATE ---
 if (isset($_POST['update_teacher'])) {
     try {
         $pdo->beginTransaction();
         
-        // Generate Username from First Name only (no numbers)
-        $nameParts = explode(' ', trim($_POST['e_name']));
-        $newUsername = strtolower($nameParts[0]); 
-
-        // 1. Update Teachers table
-        $stmt = $pdo->prepare("UPDATE teachers SET full_name=?, email=?, phone=?, department_id=?, course_info=?, year=?, section=?, teacher_id=? WHERE teacher_id=?");
+        $stmt = $pdo->prepare("UPDATE teachers SET full_name=?, email=?, phone=?, department_id=?, course_id=?, year_id=?, section_id=? WHERE id=?");
         $stmt->execute([
             $_POST['e_name'], 
             $_POST['e_email'], 
             $_POST['e_phone'], 
             $_POST['e_dept'], 
-            $_POST['e_course'], 
-            $_POST['e_year'], 
-            $_POST['e_sec'], 
-            $newUsername, 
-            $_POST['e_tid'] 
+            $_POST['e_course_id'], 
+            $_POST['e_year_id'], 
+            $_POST['e_section_id'], 
+            $_POST['e_id'] 
         ]);
         
-        // 2. Update Users table
-        $stmt2 = $pdo->prepare("UPDATE users SET full_name=?, username=? WHERE username=?");
-        $stmt2->execute([$_POST['e_name'], $newUsername, $_POST['e_tid']]);
+        // Sync User Full Name
+        $stmt2 = $pdo->prepare("UPDATE users SET full_name=? WHERE user_id=(SELECT user_id FROM teachers WHERE id=?)");
+        $stmt2->execute([$_POST['e_name'], $_POST['e_id']]);
         
         $pdo->commit(); 
-        $msg = "Record updated. Username is now: <b>$newUsername</b>";
+        $msg = "Assignment updated successfully.";
     } catch (Exception $e) { 
         if($pdo->inTransaction()) $pdo->rollBack(); 
         $error = "Update failed: " . $e->getMessage(); 
@@ -76,28 +71,21 @@ if(isset($_POST['add_teacher'])){
     try {
         $pdo->beginTransaction();
         
-        $c = $pdo->prepare("SELECT course_name FROM courses WHERE course_id=?"); 
-        $c->execute([$_POST['course_id']]); $course_name = $c->fetchColumn();
-        
-        $y = $pdo->prepare("SELECT year_name FROM academic_years WHERE year_id=?"); 
-        $y->execute([$_POST['year_id']]); $year_name = $y->fetchColumn();
-
+        $raw_tid = strtolower(trim($_POST['teacher_id']));
         $u = $pdo->prepare("SELECT user_id FROM users WHERE username=?"); 
-        $u->execute([$_POST['teacher_id']]); $usr = $u->fetch();
+        $u->execute([$raw_tid]); $usr = $u->fetch();
 
         if(!$usr){
             $plain = substr(str_shuffle("23456789ABCDEFGHJKLMNPQRSTUVWXYZ"), 0, 8);
-            $newUsername = strtolower(trim($_POST['teacher_id']));
             $pdo->prepare("INSERT INTO users(username,password,full_name,role_id,status,temp_pass) VALUES (?,?,?,2,'active',?)")
-                ->execute([$newUsername, password_hash($plain, PASSWORD_DEFAULT), $_POST['full_name'], $plain]);
+                ->execute([$raw_tid, password_hash($plain, PASSWORD_DEFAULT), $_POST['full_name'], $plain]);
             $uid = $pdo->lastInsertId();
         } else { 
             $uid = $usr['user_id']; 
-            $newUsername = strtolower(trim($_POST['teacher_id'])); // Ensure consistency if user exists
         }
 
-        $pdo->prepare("INSERT INTO teachers (teacher_id,user_id,full_name,email,phone,department_id,course_info,year,section) VALUES (?,?,?,?,?,?,?,?,?)")
-            ->execute([$newUsername, $uid, $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['dept_id'], $course_name, $year_name, $_POST['section_number']]);
+        $pdo->prepare("INSERT INTO teachers (teacher_id,user_id,full_name,email,phone,department_id,course_id,year_id,section_id) VALUES (?,?,?,?,?,?,?,?,?)")
+            ->execute([$raw_tid, $uid, $_POST['full_name'], $_POST['email'], $_POST['phone'], $_POST['dept_id'], $_POST['course_id'], $_POST['year_id'], $_POST['section_id']]);
         
         $pdo->commit();
         $msg = "Teacher Assigned Successfully!";
@@ -108,7 +96,16 @@ if(isset($_POST['add_teacher'])){
 $depts = $pdo->query("SELECT * FROM departments ORDER BY department_name ASC")->fetchAll();
 $years_data = $pdo->query("SELECT * FROM academic_years ORDER BY year_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $courses_data = $pdo->query("SELECT course_id, course_name, department_id FROM courses ORDER BY course_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$teachers = $pdo->query("SELECT t.*, u.temp_pass, d.department_name FROM teachers t JOIN users u ON t.user_id = u.user_id JOIN departments d ON t.department_id = d.department_id ORDER BY t.teacher_id DESC")->fetchAll();
+$teachers = $pdo->query("
+    SELECT t.*, u.temp_pass, d.department_name, y.year_name, sec.section_number, c.course_name 
+    FROM teachers t 
+    JOIN users u ON t.user_id = u.user_id 
+    JOIN departments d ON t.department_id = d.department_id 
+    LEFT JOIN academic_years y ON t.year_id = y.year_id
+    LEFT JOIN sections sec ON t.section_id = sec.section_id
+    LEFT JOIN courses c ON t.course_id = c.course_id
+    ORDER BY t.teacher_id DESC
+")->fetchAll();
 
 require_once '../includes/header.php';
 require_once '../includes/sidebar-admin.php';
@@ -179,7 +176,7 @@ td { padding:12px; border-bottom:1px solid #f1f5f9; font-size:13px; vertical-ali
                         <select name="year_id" id="y_main" onchange="fetchSections()" required disabled><option value="">-- Select Dept First --</option></select>
                     </div>
                     <div><label>Section</label>
-                        <select name="section_number" id="s_main" required disabled><option value="">-- Select Year First --</option></select>
+                        <select name="section_id" id="s_main" required disabled><option value="">-- Select Year First --</option></select>
                     </div>
                 </div>
                 <button name="add_teacher" class="btn btn-primary">Assign Teacher</button>
@@ -216,15 +213,15 @@ td { padding:12px; border-bottom:1px solid #f1f5f9; font-size:13px; vertical-ali
                 <tr>
                     <td><b><?= htmlspecialchars($t['full_name']) ?></b><br><small>User: <?= $t['teacher_id'] ?></small></td>
                     <td><small>📧 <?= htmlspecialchars($t['email']) ?></small><br><small>📞 <?= htmlspecialchars($t['phone']) ?></small></td>
-                    <td><?= htmlspecialchars($t['department_name']) ?><br><small><?= $t['course_info'] ?></small></td>
-                    <td><?= htmlspecialchars($t['year']) ?><br><small>Sec: <?= $t['section'] ?></small></td>
+                    <td><?= htmlspecialchars($t['department_name']) ?><br><small><?= htmlspecialchars($t['course_name'] ?? 'N/A') ?></small></td>
+                    <td><?= htmlspecialchars($t['year_name'] ?? 'N/A') ?><br><small>Sec: <?= htmlspecialchars($t['section_number'] ?? 'N/A') ?></small></td>
                     <td style="text-align:right;">
                         <button onclick="preparePrint(<?= htmlspecialchars(json_encode($t)) ?>)" class="btn btn-print">Print</button>
                         <button onclick="openEdit(<?= htmlspecialchars(json_encode($t)) ?>)" class="btn btn-edit">Edit</button>
                         <a href="?action=reset&tid=<?= $t['teacher_id'] ?>" class="btn btn-reset">Reset</a>
-                        <a href="?action=delete&tid=<?= $t['teacher_id'] ?>&course=<?= urlencode($t['course_info']) ?>&sec=<?= $t['section'] ?>" class="btn btn-del" onclick="return confirm('Remove assignment?')">Delete</a>
+                        <a href="?action=delete&id=<?= $t['id'] ?>" class="btn btn-del" onclick="return confirm('Remove assignment?')">Delete</a>
                         <!-- NEW SEND EVALUATION BUTTON -->
-                        <a href="send-evaluation.php?teacher_id=<?= $t['teacher_id'] ?>" class="btn btn-eval">Send Evaluation</a>
+                        <a href="send-evaluation.php?teacher_id=<?= $t['teacher_id'] ?>&course_id=<?= $t['course_id'] ?>&section_id=<?= $t['section_id'] ?>" class="btn btn-eval">Send Evaluation</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -237,17 +234,22 @@ td { padding:12px; border-bottom:1px solid #f1f5f9; font-size:13px; vertical-ali
     <div class="modal-content">
         <h3 style="margin-top:0;">Edit Teacher Record</h3>
         <form method="POST">
-            <input type="hidden" name="e_tid" id="e_tid">
-            <label>Full Name (First name used for Username)</label><input name="e_name" id="e_name" required style="margin-bottom:10px;">
+            <input type="hidden" name="e_id" id="e_id">
+            <label>Full Name</label><input name="e_name" id="e_name" required style="margin-bottom:10px;">
             <label>Email</label><input name="e_email" id="e_email" type="email" required style="margin-bottom:10px;">
             <label>Phone</label><input name="e_phone" id="e_phone" required style="margin-bottom:10px;">
             <label>Dept</label>
-            <select name="e_dept" id="e_dept" required style="margin-bottom:10px;">
+            <select name="e_dept" id="e_dept" required style="margin-bottom:10px;" onchange="filterEditHierarchy()">
                 <?php foreach($depts as $d): ?><option value="<?= $d['department_id'] ?>"><?= $d['department_name'] ?></option><?php endforeach; ?>
             </select>
-            <label>Course Name</label><input name="e_course" id="e_course" required style="margin-bottom:10px;">
-            <label>Year</label><input name="e_year" id="e_year" required style="margin-bottom:10px;">
-            <label>Section</label><input name="e_sec" id="e_sec" required style="margin-bottom:15px;">
+            <label>Course</label>
+            <select name="e_course_id" id="e_course_id" required style="margin-bottom:10px;"></select>
+            
+            <label>Year</label>
+            <select name="e_year_id" id="e_year_id" required style="margin-bottom:10px;" onchange="fetchEditSections()"></select>
+            
+            <label>Section</label>
+            <select name="e_section_id" id="e_section_id" required style="margin-bottom:15px;"></select>
             <div style="display:flex; gap:10px;">
                 <button type="submit" name="update_teacher" class="btn btn-primary" style="flex:1;">Update Record</button>
                 <button type="button" onclick="closeEdit()" class="btn btn-del" style="flex:1;">Cancel</button>
@@ -303,15 +305,57 @@ function searchRegistry() {
 }
 
 function openEdit(t) {
-    document.getElementById('e_tid').value = t.teacher_id;
+    document.getElementById('e_id').value = t.id;
     document.getElementById('e_name').value = t.full_name;
     document.getElementById('e_email').value = t.email;
     document.getElementById('e_phone').value = t.phone;
     document.getElementById('e_dept').value = t.department_id;
-    document.getElementById('e_course').value = t.course_info;
-    document.getElementById('e_year').value = t.year;
-    document.getElementById('e_sec').value = t.section;
+    
+    // Trigger hierarchy filter for Edit modal
+    filterEditHierarchy(t.course_id, t.year_id, t.section_id);
+    
     document.getElementById('editModal').style.display = 'block';
+}
+
+function filterEditHierarchy(selectedCourseId = null, selectedYearId = null, selectedSectionId = null) {
+    const deptId = document.getElementById('e_dept').value;
+    const yearBox = document.getElementById('e_year_id');
+    const courseBox = document.getElementById('e_course_id');
+
+    yearBox.innerHTML = '<option value="">-- Select Year --</option>';
+    courseBox.innerHTML = '<option value="">-- Select Course --</option>';
+    
+    if(deptId) {
+        yearsMaster.filter(y => y.department_id == deptId).forEach(y => {
+            const selected = (y.year_id == selectedYearId) ? 'selected' : '';
+            yearBox.innerHTML += `<option value="${y.year_id}" ${selected}>${y.year_name}</option>`;
+        });
+        coursesMaster.filter(c => c.department_id == deptId).forEach(c => {
+            const selected = (c.course_id == selectedCourseId) ? 'selected' : '';
+            courseBox.innerHTML += `<option value="${c.course_id}" ${selected}>${c.course_name}</option>`;
+        });
+        
+        if(selectedYearId) {
+            fetchEditSections(selectedYearId, selectedSectionId);
+        }
+    }
+}
+
+function fetchEditSections(yId = null, selectedSectionId = null) {
+    const yearId = yId || document.getElementById('e_year_id').value;
+    const sBox = document.getElementById('e_section_id');
+    if(!yearId) return;
+
+    fetch('fetch_sections.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'year_id=' + yearId
+    }).then(r => r.text()).then(html => { 
+        sBox.innerHTML = html;
+        if(selectedSectionId) {
+            sBox.value = selectedSectionId;
+        }
+    });
 }
 
 function closeEdit() { 

@@ -1,0 +1,25 @@
+
+--- students ---
+student_id | int(11) | NO | PRI |  | auto_increment
+user_id | int(11) | YES | MUL |  | 
+full_name | varchar(100) | NO |  |  | 
+student_id_card | varchar(50) | NO | UNI |  | 
+gender | varchar(10) | YES |  |  | 
+batch | varchar(50) | YES |  |  | 
+semester | int(11) | YES |  |  | 
+department_id | int(4) unsigned zerofill | YES | MUL |  | 
+year_id | int(11) | NO | MUL |  | 
+section_id | int(11) | NO | MUL |  | 
+
+--- courses ---
+course_id | int(11) | NO | PRI |  | auto_increment
+course_code | varchar(20) | NO | MUL |  | 
+course_name | varchar(100) | NO |  |  | 
+department_id | int(4) unsigned zerofill | YES | MUL |  | 
+year_id | int(11) | NO | MUL |  | 
+
+--- sections ---
+section_id | int(11) | NO | PRI |  | auto_increment
+year_id | int(11) | NO | MUL |  | 
+section_number | int(11) | NO |  |  | 
+section_name | varchar(10) | NO |  |  | 

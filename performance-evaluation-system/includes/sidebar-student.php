@@ -62,9 +62,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="student_dashboard.php" class="nav-item <?php echo $current_page === 'student_dashboard.php' ? 'active' : ''; ?>">
             <i class="fas fa-th-large"></i> Dashboard
         </a>
-        <a href="evaluate-teacher.php" class="nav-item <?php echo $current_page === 'evaluate-teacher.php' ? 'active' : ''; ?>">
-            <i class="fas fa-star"></i> Evaluate Teacher
-        </a>
+      
         <a href="evaluation-history.php" class="nav-item <?php echo $current_page === 'evaluation-history.php' ? 'active' : ''; ?>">
             <i class="fas fa-history"></i> My History
         </a>

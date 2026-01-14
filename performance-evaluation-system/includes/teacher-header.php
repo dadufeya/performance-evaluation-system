@@ -118,7 +118,6 @@
             </div>
             
             <a href="dashboard.php" class="nav-item">Dashboard</a>
-            <a href="profile.php" class="nav-item">Profile Settings</a>
             
             <div style="width: 1px; height: 20px; background: #e2e8f0; margin: 0 5px;"></div>
             

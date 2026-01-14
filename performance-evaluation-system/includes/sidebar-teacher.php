@@ -83,10 +83,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <i class="fas fa-poll"></i> View Performance
         </a>
 
-        <a href="feedback.php" class="nav-item <?php echo $current_page === 'feedback.php' ? 'active' : ''; ?>">
-            <i class="fas fa-comments"></i> Student Feedback
-        </a>
-
+       
         <a href="complaints.php" class="nav-item <?php echo $current_page === 'complaints.php' ? 'active' : ''; ?>">
             <i class="fas fa-exclamation-triangle"></i> My Complaints
         </a>
@@ -100,9 +97,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     </div>
 
-    <div class="sidebar-footer">
-        <a href="../logout.php" class="logout-link">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
+   
+
 </aside>

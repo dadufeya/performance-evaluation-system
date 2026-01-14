@@ -149,8 +149,6 @@
         </div>
 
         <nav class="topbar-nav">
-            <a href="<?= BASE_URL ?>admin/dashboard.php" class="nav-item">Dashboard</a>
-            <a href="<?= BASE_URL ?>profile.php" class="nav-item">Profile</a>
             <div style="width: 1px; height: 20px; background: #e2e8f0; margin: 0 10px;"></div>
             <a href="<?= BASE_URL ?>logout.php" class="btn-logout">Logout</a>
         </nav>

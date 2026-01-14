@@ -5,8 +5,8 @@ checkAccess('admin');
 
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_feedback'])) {
-    $stmt = $pdo->prepare("UPDATE complaints SET feedback = ?, teacher_id = ?, status = 'resolved' WHERE complaint_id = ?");
-    $stmt->execute([trim($_POST['feedback']), $_POST['teacher_id'], $_POST['complaint_id']]);
+    $stmt = $pdo->prepare("UPDATE complaints SET feedback = ?, status = 'resolved' WHERE complaint_id = ?");
+    $stmt->execute([trim($_POST['feedback']), $_POST['complaint_id']]);
     header("Location: manage-complaints.php?msg=success");
     exit();
 }
@@ -91,21 +91,10 @@ include '../includes/sidebar-admin.php';
                         <?php if ($row['status'] == 'pending'): ?>
                         <form method="POST">
                             <input type="hidden" name="complaint_id" value="<?= $row['complaint_id'] ?>">
-                            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                <select onchange="loadTeachers(this.value, <?= $row['complaint_id'] ?>)" class="form-select" required style="flex:1;">
-                                    <option value="">Select Dept</option>
-                                    <?php foreach($departments as $d): ?>
-                                        <option value="<?= $d['department_id'] ?>"><?= htmlspecialchars($d['department_name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-
-                                <select name="teacher_id" id="teacher_dropdown_<?= $row['complaint_id'] ?>" class="form-select" required style="flex:1;">
-                                    <option value="">Select Teacher</option>
-                                </select>
-                            </div>
-                            <textarea name="feedback" class="form-control" placeholder="Resolution notes..." required style="height:70px; margin-bottom:10px; border-radius:8px;"></textarea>
-                            <button type="submit" name="submit_feedback" class="btn-publish" style="width:100%; background:linear-gradient(145deg, #2563eb, #1d4ed8); border:none; padding:12px; color:white; border-radius:10px; font-weight:700; box-shadow:0 4px 0 #1e40af;">
-                                Resolve Complaint
+                            
+                            <textarea name="feedback" class="form-control" placeholder="Type your response to the sender..." required style="height:90px; margin-bottom:10px; border-radius:8px; padding: 12px;"></textarea>
+                            <button type="submit" name="submit_feedback" class="btn-publish" style="width:100%; background:linear-gradient(145deg, #16a34a, #15803d); border:none; padding:12px; color:white; border-radius:10px; font-weight:700; box-shadow:0 4px 0 #166534;">
+                                <i class="fas fa-paper-plane"></i> Send Response
                             </button>
                         </form>
                         <?php else: ?>

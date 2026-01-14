@@ -1,0 +1,43 @@
+
+--- teachers ---
+teacher_id | int(11) | NO | PRI |  | auto_increment
+user_id | int(11) | NO | MUL |  | 
+full_name | varchar(100) | NO |  |  | 
+department_id | int(4) unsigned zerofill | YES | MUL |  | 
+course_info | varchar(255) | YES |  |  | 
+course_id | int(11) | YES |  |  | 
+year | varchar(50) | YES |  |  | 
+year_id | int(11) | YES |  |  | 
+section | varchar(10) | YES |  |  | 
+section_id | int(11) | YES |  |  | 
+email | varchar(100) | YES |  |  | 
+phone | varchar(20) | YES |  |  | 
+
+--- evaluation_assignments ---
+assignment_id | int(11) | NO | PRI |  | auto_increment
+questionnaire_id | int(11) | YES |  |  | 
+department_id | int(11) | YES |  |  | 
+year | int(11) | YES |  |  | 
+section | varchar(10) | YES |  |  | 
+course_id | int(11) | YES |  |  | 
+teacher_id | varchar(50) | YES |  |  | 
+status | enum('active','closed') | YES |  | active | 
+created_at | timestamp | NO |  | current_timestamp() | 
+
+--- evaluation_responses ---
+response_id | int(11) | NO | PRI |  | auto_increment
+question_id | int(11) | NO | MUL |  | 
+student_id | int(11) | NO |  |  | 
+teacher_id | varchar(50) | NO |  |  | 
+course_id | int(11) | NO |  |  | 
+answer_value | text | NO |  |  | 
+submitted_at | timestamp | NO |  | current_timestamp() | 
+
+--- evaluations ---
+evaluation_id | int(11) | NO | PRI |  | auto_increment
+student_id | int(11) | NO | MUL |  | 
+released | tinyint(1) | YES |  | 0 | 
+teacher_id | int(11) | NO | MUL |  | 
+course_id | int(11) | NO | MUL |  | 
+questionnaire_id | int(11) | NO | MUL |  | 
+submitted_at | timestamp | NO |  | current_timestamp() | 
